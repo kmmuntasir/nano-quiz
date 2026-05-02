@@ -289,4 +289,109 @@ router.get('/api/quiz/question/:sequence', authenticate, async (req: Authenticat
     }
 })
 
+router.post('/api/quiz/answer', authenticate, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+        const userId = req.userId!
+        const { sequence_order, answer } = req.body
+
+        // Validate sequence_order
+        if (!Number.isInteger(sequence_order) || sequence_order < 1 || sequence_order > 10) {
+            res.status(400).json({ error: 'Invalid sequence_order. Must be integer 1-10.' })
+            return
+        }
+
+        // Validate answer
+        if (!answer || !['A', 'B', 'C', 'D'].includes(answer.toUpperCase())) {
+            res.status(400).json({ error: 'Invalid answer. Must be A, B, C, or D.' })
+            return
+        }
+
+        // Check if answer already exists for this sequence (409)
+        const { rows: existing } = await query<{ user_answer: string }>(
+            'SELECT user_answer FROM user_sessions WHERE user_id = $1 AND sequence_order = $2',
+            [userId, sequence_order],
+        )
+
+        if (existing.length === 0) {
+            res.status(404).json({ error: 'Question not found for this sequence' })
+            return
+        }
+
+        if (existing[0].user_answer !== null) {
+            res.status(409).json({ error: 'Answer already submitted for this question' })
+            return
+        }
+
+        // Enforce sequential ordering: all prior sequences must be answered
+        const { rows: unanswered } = await query<{ sequence_order: number }>(
+            'SELECT sequence_order FROM user_sessions WHERE user_id = $1 AND sequence_order < $2 AND user_answer IS NULL ORDER BY sequence_order LIMIT 1',
+            [userId, sequence_order],
+        )
+
+        if (unanswered.length > 0) {
+            res.status(409).json({ error: `Must answer question ${unanswered[0].sequence_order} first` })
+            return
+        }
+
+        // Save the answer
+        await query(
+            'UPDATE user_sessions SET user_answer = $3, answered_at = NOW() WHERE user_id = $1 AND sequence_order = $2',
+            [userId, sequence_order, answer.toUpperCase()],
+        )
+
+        // If Q10, finalize quiz in transaction
+        if (sequence_order === 10) {
+            const client = await getClient()
+            try {
+                await client.query('BEGIN')
+
+                // Calculate score
+                const { rows: scoreRows } = await client.query<{ score: number }>(
+                    `SELECT COUNT(*)::int AS score
+                     FROM user_sessions us
+                     JOIN questions q ON q.id = us.question_id
+                     WHERE us.user_id = $1 AND us.user_answer = q.correct_opt`,
+                    [userId],
+                )
+                const score = scoreRows[0].score
+
+                // Update users table with score, completed_at, duration_seconds
+                const { rows: completedRows } = await client.query<{
+                    completed_at: string
+                    duration_seconds: number
+                }>(
+                    `UPDATE users
+                     SET score = $2,
+                         completed_at = NOW(),
+                         duration_seconds = EXTRACT(EPOCH FROM (NOW() - started_at))::int
+                     WHERE id = $1
+                     RETURNING completed_at, duration_seconds`,
+                    [userId, score],
+                )
+
+                await client.query('COMMIT')
+
+                res.json({
+                    success: true,
+                    completed: true,
+                    score,
+                    completed_at: completedRows[0].completed_at,
+                    duration_seconds: completedRows[0].duration_seconds,
+                })
+                return
+            } catch (err) {
+                await client.query('ROLLBACK')
+                throw err
+            } finally {
+                client.release()
+            }
+        }
+
+        res.json({ success: true })
+    } catch (err) {
+        console.error('Submit answer error:', err)
+        res.status(500).json({ error: 'Failed to submit answer' })
+    }
+})
+
 export default router
