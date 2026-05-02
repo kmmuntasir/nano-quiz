@@ -1,6 +1,7 @@
 import { useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import QuestionDisplay from '../components/QuestionDisplay'
+import type { AnswerResult } from '../components/QuestionDisplay'
 
 export default function Question() {
     const { sequence: sequenceParam } = useParams<{ sequence: string }>()
@@ -8,10 +9,19 @@ export default function Question() {
     const sequence = Number(sequenceParam)
 
     const handleAnswer = useCallback(
-        (_sequence: number, _selectedOption: string) => {
+        (_sequence: number, _selectedOption: string, result?: AnswerResult) => {
             const next = _sequence + 1
             if (next > 10) {
-                navigate('/quiz/complete', { replace: true })
+                navigate('/quiz/complete', {
+                    replace: true,
+                    state: result
+                        ? {
+                              score: result.score,
+                              completed_at: result.completed_at,
+                              duration_seconds: result.duration_seconds,
+                          }
+                        : undefined,
+                })
             } else {
                 navigate(`/quiz/${next}`, { replace: true })
             }

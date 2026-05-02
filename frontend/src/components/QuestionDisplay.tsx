@@ -13,9 +13,15 @@ interface QuestionData {
     }
 }
 
+export interface AnswerResult {
+    score?: number
+    completed_at?: string
+    duration_seconds?: number
+}
+
 interface QuestionDisplayProps {
     sequence: number
-    onAnswer: (sequence: number, selectedOption: string) => void
+    onAnswer: (sequence: number, selectedOption: string, result?: AnswerResult) => void
     onSequenceMismatch?: (correctSequence: number) => void
 }
 
@@ -28,6 +34,7 @@ export default function QuestionDisplay({
 }: QuestionDisplayProps) {
     const [question, setQuestion] = useState<QuestionData | null>(null)
     const [loading, setLoading] = useState(true)
+    const [submitting, setSubmitting] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [selected, setSelected] = useState<string | null>(null)
 
@@ -49,10 +56,30 @@ export default function QuestionDisplay({
     }, [sequence, onSequenceMismatch])
 
     const handleSubmit = useCallback(() => {
-        if (!selected) return
-        console.log(`Answer submitted: sequence=${sequence}, option=${selected}`)
-        onAnswer(sequence, selected)
-    }, [selected, sequence, onAnswer])
+        if (!selected || submitting) return
+        setSubmitting(true)
+        setError(null)
+
+        api.post<{ message: string; score?: number; completed_at?: string; duration_seconds?: number }>(
+            '/quiz/answer',
+            { sequence_order: sequence, answer: selected },
+        )
+            .then((res) => {
+                const isLast = sequence === TOTAL_QUESTIONS
+                const result = isLast
+                    ? {
+                          score: res.data.score,
+                          completed_at: res.data.completed_at,
+                          duration_seconds: res.data.duration_seconds,
+                      }
+                    : undefined
+                onAnswer(sequence, selected, result)
+            })
+            .catch((err) => {
+                setError(err instanceof Error ? err.message : 'Failed to submit answer.')
+            })
+            .finally(() => setSubmitting(false))
+    }, [selected, sequence, submitting, onAnswer])
 
     if (loading) {
         return (
@@ -105,10 +132,14 @@ export default function QuestionDisplay({
                 <div className="mt-6 text-center">
                     <button
                         onClick={handleSubmit}
-                        disabled={!selected}
+                        disabled={!selected || submitting}
                         className="px-6 py-3 bg-primary text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        {isLast ? 'Submit' : 'Next'}
+                        {submitting
+                            ? 'Submitting...'
+                            : isLast
+                              ? 'Submit'
+                              : 'Next'}
                     </button>
                 </div>
             </div>

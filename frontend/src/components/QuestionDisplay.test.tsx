@@ -4,7 +4,7 @@ import QuestionDisplay from './QuestionDisplay'
 import { ApiError } from '../api/client'
 
 vi.mock('../api/client', () => ({
-    default: { get: vi.fn() },
+    default: { get: vi.fn(), post: vi.fn() },
     ApiError: class extends Error {
         status: number
         constructor(message: string, status: number) {
@@ -109,13 +109,16 @@ describe('QuestionDisplay', () => {
     })
 
     it('calls onAnswer with sequence and selected option', async () => {
+        vi.mocked(api.post).mockResolvedValue({ data: { message: 'Answer recorded' } })
         const { onAnswer } = renderComponent({ sequence: 3 })
         await waitFor(() => {
             expect(screen.getByText('2020')).toBeInTheDocument()
         })
         fireEvent.click(screen.getByText('2020'))
         fireEvent.click(screen.getByRole('button', { name: 'Next' }))
-        expect(onAnswer).toHaveBeenCalledWith(3, 'C')
+        await waitFor(() => {
+            expect(onAnswer).toHaveBeenCalledWith(3, 'C', undefined)
+        })
     })
 
     it('shows error on fetch failure', async () => {
@@ -150,5 +153,48 @@ describe('QuestionDisplay', () => {
         await waitFor(() => {
             expect(api.get).toHaveBeenCalledWith('/quiz/question/7')
         })
+    })
+
+    it('shows Submit button on Q10 and passes score result', async () => {
+        vi.mocked(api.post).mockResolvedValue({
+            data: { message: 'Quiz completed', score: 8, completed_at: '2026-05-03T12:00:00Z', duration_seconds: 300 },
+        })
+        const { onAnswer } = renderComponent({ sequence: 10 })
+        await waitFor(() => {
+            expect(screen.getByText('2020')).toBeInTheDocument()
+        })
+        fireEvent.click(screen.getByText('2020'))
+        fireEvent.click(screen.getByRole('button', { name: 'Submit' }))
+        await waitFor(() => {
+            expect(onAnswer).toHaveBeenCalledWith(10, 'C', {
+                score: 8,
+                completed_at: '2026-05-03T12:00:00Z',
+                duration_seconds: 300,
+            })
+        })
+    })
+
+    it('shows error on submit failure', async () => {
+        vi.mocked(api.post).mockRejectedValue(new Error('Network error'))
+        renderComponent({ sequence: 3 })
+        await waitFor(() => {
+            expect(screen.getByText('2020')).toBeInTheDocument()
+        })
+        fireEvent.click(screen.getByText('2020'))
+        fireEvent.click(screen.getByRole('button', { name: 'Next' }))
+        await waitFor(() => {
+            expect(screen.getByText('Network error')).toBeInTheDocument()
+        })
+    })
+
+    it('disables button while submitting', async () => {
+        vi.mocked(api.post).mockImplementation(() => new Promise(() => {}))
+        renderComponent({ sequence: 3 })
+        await waitFor(() => {
+            expect(screen.getByText('2020')).toBeInTheDocument()
+        })
+        fireEvent.click(screen.getByText('2020'))
+        fireEvent.click(screen.getByRole('button', { name: 'Next' }))
+        expect(screen.getByRole('button', { name: 'Submitting...' })).toBeDisabled()
     })
 })
