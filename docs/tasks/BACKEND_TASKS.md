@@ -68,7 +68,8 @@ Initialize the backend project with Express.js and TypeScript. Set up the projec
     "pg": "^8.x",
     "google-auth-library": "^9.x",
     "jsonwebtoken": "^9.x",
-    "uuid": "^9.x"
+    "uuid": "^9.x",
+    "morgan": "^1.x"
   },
   "devDependencies": {
     "@types/express": "^4.x",
@@ -76,6 +77,7 @@ Initialize the backend project with Express.js and TypeScript. Set up the projec
     "@types/pg": "^8.x",
     "@types/jsonwebtoken": "^9.x",
     "@types/uuid": "^9.x",
+    "@types/morgan": "^1.x",
     "typescript": "^5.x",
     "tsx": "^4.x"
   }

@@ -341,6 +341,7 @@ Configure Netlify for frontend deployment with automatic deploys from git.
 
 ```toml
 [build]
+  base = "frontend"
   command = "npm run build"
   publish = "dist"
 
