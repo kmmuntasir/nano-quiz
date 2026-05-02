@@ -5,6 +5,7 @@ import healthRouter from './routes/health.js'
 import { closePool } from './db/index.js'
 import authRouter from './routes/auth.js'
 import quizRouter from './routes/quiz.js'
+import leaderboardRouter from './routes/leaderboard.js'
 import { corsHandler, preflightHandler } from './middleware/cors.js'
 import { authenticate } from './middleware/auth.js'
 
@@ -19,6 +20,7 @@ app.use(express.json())
 app.use(authRouter)
 app.use('/api', authenticate)
 app.use(quizRouter)
+app.use(leaderboardRouter)
 app.use(healthRouter)
 
 const server = app.listen(PORT, () => {
