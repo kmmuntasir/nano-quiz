@@ -408,6 +408,7 @@ Create the leaderboard page displaying ranked user scores.
 - [ ] Fetches data via `GET /api/leaderboard`
 - [ ] Displays ranked list sorted by score DESC
 - [ ] Shows user name, score, and duration
+- [ ] **Note:** `duration_seconds` is calculated by the backend as `(completed_at - started_at)`
 - [ ] Highlights current user's row
 - [ ] Handles empty state (no scores yet)
 

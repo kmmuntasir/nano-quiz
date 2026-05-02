@@ -19,6 +19,8 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 -- Table: questions
+-- Seed JSON format: { "question": "...", "options": { "A": "...", "B": "...", "C": "...", "D": "..." }, "correct_option": "B" }
+-- The seed script transforms this to columns: opt_a, opt_b, opt_c, opt_d, correct_opt
 CREATE TABLE IF NOT EXISTS questions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     category VARCHAR(50) NOT NULL CHECK (category IN ('faq', 'trivia')),
