@@ -1,0 +1,11 @@
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# AI generated (keep directory, ignore contents)
+docs/ai_generated/*
+!docs/ai_generated/
+!docs/ai_generated/.gitkeep
