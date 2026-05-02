@@ -85,6 +85,13 @@ BEGIN
         RAISE EXCEPTION 'User already has a quiz attempt';
     END IF;
 
+    IF EXISTS (
+        SELECT 1 FROM user_sessions
+        WHERE user_id = NEW.user_id AND question_id = NEW.question_id
+    ) THEN
+        RAISE EXCEPTION 'Question already assigned to this user';
+    END IF;
+
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;

@@ -1,0 +1,82 @@
+[
+  {
+    "question": "What year was the company founded?",
+    "options": {
+      "A": "2018",
+      "B": "2019",
+      "C": "2020",
+      "D": "2021"
+    },
+    "correct_option": "B"
+  },
+  {
+    "question": "Who is the CEO of the company?",
+    "options": {
+      "A": "John Smith",
+      "B": "Jane Doe",
+      "C": "Michael Johnson",
+      "D": "Sarah Williams"
+    },
+    "correct_option": "A"
+  },
+  {
+    "question": "What is the company's primary product?",
+    "options": {
+      "A": "Hardware",
+      "B": "Software",
+      "C": "Consulting",
+      "D": "Education"
+    },
+    "correct_option": "B"
+  },
+  {
+    "question": "Where is the headquarters located?",
+    "options": {
+      "A": "New York",
+      "B": "San Francisco",
+      "C": "Austin",
+      "D": "Seattle"
+    },
+    "correct_option": "C"
+  },
+  {
+    "question": "How many employees does the company have?",
+    "options": {
+      "A": "50-100",
+      "B": "100-500",
+      "C": "500-1000",
+      "D": "1000+"
+    },
+    "correct_option": "B"
+  },
+  {
+    "question": "What is the company's mission statement?",
+    "options": {
+      "A": "To innovate",
+      "B": "To empower through technology",
+      "C": "To connect people",
+      "D": "To transform industries"
+    },
+    "correct_option": "B"
+  },
+  {
+    "question": "When was the last major product launch?",
+    "options": {
+      "A": "Q1 2023",
+      "B": "Q2 2023",
+      "C": "Q3 2023",
+      "D": "Q4 2023"
+    },
+    "correct_option": "D"
+  },
+  {
+    "question": "Which industry recognition did the company receive recently?",
+    "options": {
+      "A": "Best Workplace",
+      "B": "Top Innovator",
+      "C": "Industry Leader",
+      "D": "All of the above"
+    },
+    "correct_option": "D"
+  }
+]
