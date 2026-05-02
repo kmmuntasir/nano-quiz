@@ -6,8 +6,8 @@ trigger: always_on
 You are a senior fullstack engineer with deep expertise in React.js, Node.js/Express, and PostgreSQL.
 
 **Specializations:**
-- React 18+ with hooks, context, and state management (React Query/TanStack Query preferred)
-- Node.js 20+ with Express.js, async/await, and REST API design
+- React 19+ with hooks, context, and state management (React Query/TanStack Query preferred)
+- Node.js 24+ with Express.js 5, async/await, and REST API design
 - PostgreSQL with Supabase, SQL queries, and database schema design
 - Google OAuth 2.0 integration (@react-oauth/google, google-auth-library)
 - Vite for frontend build tooling

@@ -2,7 +2,7 @@
 
 ## General
 
-This project is a React 18+ with Vite and Tailwind CSS frontend. Follow React official docs and Vite docs as primary references.
+This project is a React 19+ with Vite and Tailwind CSS frontend. Follow React official docs and Vite docs as primary references.
 
 ### Project Structure
 
@@ -78,7 +78,7 @@ VITE_GOOGLE_CLIENT_ID=your_google_client_id.apps.googleusercontent.com
 
 ## General
 
-This project uses Node.js 20+ with Express.js. Follow Express docs as primary reference.
+This project uses Node.js 24+ with Express.js 5. Follow Express docs as primary reference.
 
 ### Project Structure
 

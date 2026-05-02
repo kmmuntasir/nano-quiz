@@ -10,8 +10,8 @@ NanoQuiz (OpenQuiz) is a plug-n-play quiz platform. Organizations fork it, drop 
 
 ## Tech Stack
 
-- **Frontend:** React 18 + Vite + TypeScript + Tailwind CSS → Netlify
-- **Backend:** Node.js 20 + Express.js + TypeScript → Render
+- **Frontend:** React 19.2 + Vite + TypeScript + Tailwind CSS → Netlify
+- **Backend:** Node.js 24 + Express.js 5 + TypeScript → Render
 - **Database:** PostgreSQL via Supabase (`pg` driver, NOT an ORM)
 - **Auth:** Google OAuth 2.0 (`@react-oauth/google` client, `google-auth-library` server)
 - **Testing:** Vitest (both frontend and backend)

@@ -20,8 +20,8 @@ This document outlines the complete task breakdown for building the OpenQuiz bac
 
 | Attribute | Value |
 |-----------|-------|
-| **Runtime** | Node.js 18+ |
-| **Framework** | Express.js |
+| **Runtime** | Node.js 24+ |
+| **Framework** | Express.js 5 |
 | **Language** | TypeScript |
 | **Database** | PostgreSQL (Supabase) |
 | **Port** | 3000 |
@@ -64,7 +64,7 @@ Initialize the backend project with Express.js and TypeScript. Set up the projec
 ```json
 {
   "dependencies": {
-    "express": "^4.x",
+    "express": "^5.x",
     "cors": "^2.x",
     "dotenv": "^16.x",
     "pg": "^8.x",
@@ -74,8 +74,8 @@ Initialize the backend project with Express.js and TypeScript. Set up the projec
     "morgan": "^1.x"
   },
   "devDependencies": {
-    "@types/node": "^20.x",
-    "@types/express": "^4.x",
+    "@types/node": "^24.x",
+    "@types/express": "^5.x",
     "@types/cors": "^2.x",
     "@types/pg": "^8.x",
     "@types/jsonwebtoken": "^9.x",

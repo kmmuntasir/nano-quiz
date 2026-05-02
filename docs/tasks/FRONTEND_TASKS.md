@@ -71,15 +71,15 @@ Initialize the frontend project with React.js, Vite, and TypeScript. Install all
 ```json
 {
   "dependencies": {
-    "react": "^18.x",
-    "react-dom": "^18.x",
+    "react": "^19.x",
+    "react-dom": "^19.x",
     "react-router-dom": "^6.x",
     "@react-oauth/google": "^4.x",
     "axios": "^1.x"
   },
   "devDependencies": {
-    "@types/react": "^18.x",
-    "@types/react-dom": "^18.x",
+    "@types/react": "^19.x",
+    "@types/react-dom": "^19.x",
     "@vitejs/plugin-react": "^4.x",
     "typescript": "^5.x",
     "vite": "^5.x",
