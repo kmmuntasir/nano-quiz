@@ -59,6 +59,8 @@ The backend repository will contain a `/data` directory expecting two files:
 ]
 ```
 
+> **Note:** The `category` field is determined by the file name (`faq_questions.json` → `faq`, `trivia_questions.json` → `trivia`), not by a field in the JSON object. The seed script maps the nested `options` object to the database columns (`opt_a`, `opt_b`, `opt_c`, `opt_d`) and `correct_option` to `correct_opt`.
+
 ### 4.2 Automated Seeding Script
 
 The backend `package.json` will include a script (`npm run seed`). When executed, it will parse the JSON files, format them, and insert them into the PostgreSQL `questions` table, tagging them with the appropriate category (`faq` or `trivia`). Seeding is idempotent — re-running it will skip questions that already exist (matched by category + question text).

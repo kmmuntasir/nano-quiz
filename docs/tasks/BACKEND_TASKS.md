@@ -114,7 +114,7 @@ Create the `.env.example` file documenting all required environment variables. C
 | RESTRICT_DOMAIN | No | Domain to restrict (e.g., @exabyting.com) |
 | JWT_SECRET | Yes | Secret for signing JWT tokens |
 | SUPABASE_DB_URL | Yes | PostgreSQL connection string |
-| EVENT_DEADLINE_ISO | Yes | ISO 8601 deadline timestamp |
+| EVENT_DEADLINE_ISO | No | ISO 8601 deadline timestamp. Leave blank or unset to keep quiz open indefinitely |
 | TRACK_PER_QUESTION_TIME | No | Record per-question view timestamps (default: false) |
 
 ---
