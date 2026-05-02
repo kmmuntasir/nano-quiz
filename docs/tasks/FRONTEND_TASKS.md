@@ -278,8 +278,11 @@ interface QuizStatus {
   completed: boolean;
   current_sequence?: number;
   started_at?: string;
+  score?: number;
+  completed_at?: string;
+  duration_seconds?: number;
 }
-
+```
 // Logic:
 // if (!started) → Show StartButton
 // if (started && !completed) → Navigate to /quiz/current_sequence
@@ -636,7 +639,7 @@ App
 | `/api/auth/google` | POST | T4 | `{ token }` → `{ token, user, onboarding_required }` |
 | `/api/auth/onboard` | POST | T5 | `{ employee_id }` → `{ success }` |
 | `/api/quiz/status` | GET | T6 | → `{ started, completed, current_sequence }` |
-| `/api/quiz/start` | POST | T7 | → `{ success }` |
+| `/api/quiz/start` | POST | T7 | → `{ started, completed, current_sequence, started_at }` |
 | `/api/quiz/question/:sequence` | GET | T8 | → `{ sequence_order, question, options }` |
 | `/api/quiz/answer` | POST | T9 | `{ sequence_order, answer }` → `{ success }` (Q1–Q9) / `{ success, completed, score }` (Q10) |
 | `/api/leaderboard` | GET | T11 | → `[ { rank, name, employee_id, score, duration_seconds } ]` |

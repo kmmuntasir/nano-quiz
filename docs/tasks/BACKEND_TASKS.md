@@ -270,8 +270,7 @@ Implement the `/api/auth/google` endpoint that verifies the Google JWT token, cr
     "id": "uuid",
     "email": "user@example.com",
     "name": "John Doe",
-    "employee_id": null,
-    "has_onboarded": false
+    "employee_id": null
   },
   "onboarding_required": true
 }
@@ -506,7 +505,9 @@ Implement the `/api/quiz/answer` endpoint that saves the user's answer for a giv
 {
   "success": true,
   "completed": true,
-  "score": 8
+  "score": 8,
+  "completed_at": "2024-01-15T10:05:32Z",
+  "duration_seconds": 332
 }
 ```
 
