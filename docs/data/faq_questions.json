@@ -1,0 +1,12 @@
+[
+  {
+    "question": "What year was the company founded?",
+    "options": {
+      "A": "2018",
+      "B": "2019",
+      "C": "2020",
+      "D": "2021"
+    },
+    "correct_option": "B"
+  }
+]
