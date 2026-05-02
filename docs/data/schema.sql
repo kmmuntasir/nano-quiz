@@ -44,7 +44,8 @@ CREATE TABLE IF NOT EXISTS user_sessions (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     answered_at TIMESTAMPTZ,
     UNIQUE (user_id, sequence_order),
-    UNIQUE (user_id, question_id)
+    UNIQUE (user_id, question_id),
+    CHECK ((user_answer IS NULL AND answered_at IS NULL) OR (user_answer IS NOT NULL AND answered_at IS NOT NULL))
 );
 
 -- Indexes for performance

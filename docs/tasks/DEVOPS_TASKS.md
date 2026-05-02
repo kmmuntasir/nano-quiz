@@ -546,7 +546,7 @@ T1  ─────► T2 ─────► T3
 | RESTRICT_DOMAIN | No | exabyting.com |
 | JWT_SECRET | Yes | random_string |
 | SUPABASE_DB_URL | Yes | postgresql://... |
-| EVENT_DEADLINE_ISO | Yes | 2024-12-31T23:59:59Z |
+| EVENT_DEADLINE_ISO | No | 2024-12-31T23:59:59Z |
 | TRACK_PER_QUESTION_TIME | No | true |
 
 ### Frontend (.env)
