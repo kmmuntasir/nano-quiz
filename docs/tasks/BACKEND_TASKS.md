@@ -289,6 +289,7 @@ Implement the `/api/quiz/status` endpoint that checks the user's current quiz pr
 - [ ] Returns `completed: true` if quiz submitted
 - [ ] Returns `started: false` if not started
 - [ ] Handles resume for disconnected users
+- [ ] **Exempt from deadline check** — users who completed before the deadline must be able to retrieve their results (score, timestamps) even after the event ends
 
 **Response Schema:**
 
@@ -577,9 +578,10 @@ Create middleware that rejects requests after the event deadline.
 
 **Acceptance Criteria:**
 
-- [ ] All quiz endpoints check against `EVENT_DEADLINE_ISO`
+- [ ] All quiz endpoints **except `GET /api/quiz/status`** check against `EVENT_DEADLINE_ISO`
 - [ ] After deadline returns 403 Forbidden
 - [ ] Message: "The event has concluded."
+- [ ] `GET /api/quiz/status` is exempt from the deadline check so completed users can still retrieve their results after the event ends
 
 ---
 
@@ -698,6 +700,7 @@ Write integration tests for security middleware and the leaderboard endpoint.
 - [ ] Deadline middleware
     - [ ] Before deadline: allows request
     - [ ] After deadline: returns 403 with "The event has concluded."
+    - [ ] `GET /api/quiz/status` is exempt — returns results even after deadline
 - [ ] CORS
     - [ ] Request from `FRONTEND_URL`: succeeds
     - [ ] Request from different origin: rejected

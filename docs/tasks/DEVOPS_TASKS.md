@@ -307,6 +307,7 @@ RESTRICT_DOMAIN=exabyting.com
 JWT_SECRET=super_secret_string
 SUPABASE_DB_URL=postgresql://...
 EVENT_DEADLINE_ISO=2024-12-31T23:59:59Z
+TRACK_PER_QUESTION_TIME=true
 ```
 
 ---
@@ -577,6 +578,6 @@ T1  ─────► T2 ─────► T3
 |-------|---------|
 | CORS error | Verify FRONTEND_URL matches exactly |
 | Database connection failed | Check SUPABASE_DB_URL |
-| 403 on quiz endpoints | Check EVENT_DEADLINE_ISO |
+| 403 on quiz endpoints | Check EVENT_DEADLINE_ISO (note: `/api/quiz/status` is exempt) |
 | OAuth not working | Verify GOOGLE_CLIENT_ID |
 | Build failed | Check build commands |
