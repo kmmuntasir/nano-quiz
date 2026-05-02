@@ -125,7 +125,7 @@ All endpoints under `/api/*` require a Bearer token (JWT issued by the Express b
 ### 7.3 Leaderboard Routes
 
 -   `GET /api/leaderboard`
-    -   **Action:** Returns the ranked list of users, sorted by `score` DESC, then by `(completed_at - started_at)` ASC.
+    -   **Action:** Returns the ranked list of users who have completed the quiz (`completed_at IS NOT NULL`), sorted by `score` DESC, then by `(completed_at - started_at)` ASC. Users who have not completed the quiz are excluded.
 
 ## 8\. Environment Variables
 
@@ -138,7 +138,7 @@ GOOGLE_CLIENT_ID=your_google_client_id.apps.googleusercontent.com
 RESTRICT_DOMAIN=exabyting.com # Leave blank to allow any Gmail
 JWT_SECRET=super_secret_string_for_app_sessions
 SUPABASE_DB_URL=postgresql://postgres:[YOUR-PASSWORD]@db.[YOUR-PROJECT].supabase.co:5432/postgres
-EVENT_DEADLINE_ISO=2024-12-31T23:59:59Z # Stops accepting submissions after this time
+EVENT_DEADLINE_ISO=2024-12-31T23:59:59Z # Stops accepting submissions after this time. Leave blank or unset to disable deadline enforcement (quiz remains open indefinitely).
 TRACK_PER_QUESTION_TIME=true # Record when each question is viewed (for per-question analytics)
 ```
 
