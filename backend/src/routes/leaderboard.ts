@@ -6,14 +6,15 @@ const router = Router()
 router.get('/api/leaderboard', async (_req: Request, res: Response) => {
     try {
         const result = await query(
-            `SELECT name, employee_id, score, duration_seconds
+            `SELECT ROW_NUMBER() OVER (ORDER BY score DESC, duration_seconds ASC)::int AS rank,
+                    name, employee_id, score, duration_seconds
              FROM users
              WHERE completed_at IS NOT NULL
-             ORDER BY score DESC, duration_seconds ASC`,
+             ORDER BY rank`,
         )
 
-        const leaderboard = result.rows.map((row, index) => ({
-            rank: index + 1,
+        const leaderboard = result.rows.map((row) => ({
+            rank: row.rank,
             name: row.name,
             employee_id: row.employee_id,
             score: row.score,
