@@ -134,6 +134,9 @@ Create a centralized API client using Axios with interceptors for authentication
 - [ ] Request interceptor attaches Bearer token
 - [ ] Response interceptor handles 401/403 errors
 - [ ] Global error handler displays user-friendly messages
+- [ ] React Context for auth state is created (`AuthContext`) tracking user, token, and onboarding status
+- [ ] `useAuth()` hook exposes `user`, `token`, `isAuthenticated`, `login()`, `logout()` methods
+- [ ] Auth state is persisted and rehydrated from localStorage on app load
 
 **Implementation Notes:**
 
@@ -167,6 +170,14 @@ api.interceptors.response.use(
 export default api;
 ```
 
+**Auth Context Implementation:**
+
+```typescript
+// src/context/AuthContext.tsx
+// Provides: user, token, isAuthenticated, login(), logout(), hasOnboarded()
+// Persists token in localStorage, rehydrates on mount
+```
+
 ---
 
 ## Phase 2: Authentication
@@ -184,9 +195,10 @@ Create the login page with Google OAuth button using `@react-oauth/google`.
 **Acceptance Criteria:**
 
 - [ ] Google OAuth button is displayed
+- [ ] `GoogleOAuthProvider` from `@react-oauth/google` wraps the app at root level with `VITE_GOOGLE_CLIENT_ID`
 - [ ] Clicking triggers Google popup
 - [ ] Google JWT is sent to `POST /api/auth/google`
-- [ ] On success: stores JWT in localStorage
+- [ ] On success: stores JWT in localStorage via `AuthContext`
 - [ ] On success: redirects to `/onboard` or `/quiz` based on onboarding status
 
 **PRD Reference:** Section 5.1, 7.1
@@ -366,7 +378,7 @@ Create the completion screen shown after quiz submission.
 - [ ] Triggered after `POST /api/quiz/submit`
 - [ ] Shows confirmation message
 - [ ] Provides link to leaderboard
-- [ ] Provides "Take Quiz Again" link (if allowed by business logic)
+- [ ] No option to retake quiz (PRD: strictly single attempt)
 
 **PRD Reference:** Section 5.4
 

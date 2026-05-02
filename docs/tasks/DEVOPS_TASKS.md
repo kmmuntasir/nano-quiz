@@ -357,15 +357,15 @@ VITE_GOOGLE_CLIENT_ID=your_google_client_id.apps.googleusercontent.com
 
 ---
 
-### T10: Configure CORS on Backend
+### T10: Verify CORS on Backend
 
 **Description:**
 
-Ensure Backend CORS is configured to accept only the Netlify frontend URL.
+Verify that Backend CORS is properly configured to accept only the Netlify frontend URL. **Note:** The actual CORS middleware implementation is handled in Backend T13 (Security phase). This task verifies the deployment configuration is correct.
 
 **Dependencies:**
 
-- T8
+- T8, Backend T13
 
 **Acceptance Criteria:**
 

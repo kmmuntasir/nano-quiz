@@ -30,7 +30,7 @@ This document outlines the complete task breakdown for building the OpenQuiz bac
 | Phase | # Tasks | Description |
 |-------|--------|------------|
 | 1 | 2 | Project initialization and configuration |
-| 2 | 2 | Database connection and seeding |
+| 2 | 2 | Database connection, schema, and seeding |
 | 3 | 2 | Google OAuth and onboarding |
 | 4 | 5 | Quiz flow (status, start, question, answer, submit) |
 | 5 | 1 | Leaderboard endpoint |
@@ -77,7 +77,7 @@ Initialize the backend project with Express.js and TypeScript. Set up the projec
     "@types/jsonwebtoken": "^9.x",
     "@types/uuid": "^9.x",
     "typescript": "^5.x",
-    "ts-node": "^10.x"
+    "tsx": "^4.x"
   }
 }
 ```
@@ -132,6 +132,8 @@ Implement the database connection pool using the `pg` library. Create a centrali
 - [ ] Can execute raw SQL queries
 - [ ] Connection errors are handled gracefully
 - [ ] Pool releases connections properly
+- [ ] `sql/schema.sql` file is created with CREATE TABLE statements for `users`, `questions`, and `user_sessions` matching PRD Section 6 exactly
+- [ ] Schema includes proper foreign keys, constraints, and indexes
 
 **Implementation Notes:**
 
@@ -145,6 +147,47 @@ const pool = new Pool({
 
 export const query = (text: string, params?: any[]) => pool.query(text, params);
 export const getClient = () => pool.connect();
+```
+
+**Schema File:**
+
+Create `sql/schema.sql` with the three tables from PRD Section 6:
+
+```sql
+CREATE TABLE users (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  google_id VARCHAR(255) UNIQUE NOT NULL,
+  email VARCHAR(255) UNIQUE NOT NULL,
+  name VARCHAR(255) NOT NULL,
+  employee_id VARCHAR(100) UNIQUE,
+  started_at TIMESTAMPTZ,
+  completed_at TIMESTAMPTZ,
+  score INT CHECK (score IS NULL OR (score >= 0 AND score <= 10))
+);
+
+CREATE TABLE questions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  category VARCHAR(50) NOT NULL CHECK (category IN ('faq', 'trivia')),
+  question_text TEXT NOT NULL,
+  opt_a VARCHAR(255) NOT NULL,
+  opt_b VARCHAR(255) NOT NULL,
+  opt_c VARCHAR(255) NOT NULL,
+  opt_d VARCHAR(255) NOT NULL,
+  correct_opt CHAR(1) NOT NULL CHECK (correct_opt IN ('A', 'B', 'C', 'D'))
+);
+
+CREATE TABLE user_sessions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id),
+  question_id UUID NOT NULL REFERENCES questions(id),
+  sequence_order INT NOT NULL CHECK (sequence_order BETWEEN 1 AND 10),
+  user_answer CHAR(1) CHECK (user_answer IS NULL OR user_answer IN ('A', 'B', 'C', 'D')),
+  UNIQUE (user_id, sequence_order),
+  UNIQUE (user_id, question_id)
+);
+
+CREATE INDEX idx_user_sessions_user_seq ON user_sessions(user_id, sequence_order);
+CREATE INDEX idx_questions_category ON questions(category);
 ```
 
 ---
@@ -308,22 +351,25 @@ Implement the `/api/quiz/start` endpoint that allocates 10 random questions and 
 ```sql
 BEGIN;
 UPDATE users SET started_at = NOW() WHERE id = $1 AND started_at IS NULL;
+
+WITH selected_faq AS (
+  SELECT id FROM questions WHERE category = 'faq' ORDER BY RANDOM() LIMIT 6
+),
+selected_trivia AS (
+  SELECT id FROM questions WHERE category = 'trivia' ORDER BY RANDOM() LIMIT 4
+),
+all_questions AS (
+  SELECT id FROM selected_faq
+  UNION ALL
+  SELECT id FROM selected_trivia
+),
+shuffled AS (
+  SELECT id, ROW_NUMBER() OVER (ORDER BY RANDOM()) AS seq
+  FROM all_questions
+)
 INSERT INTO user_sessions (user_id, question_id, sequence_order)
-SELECT $1, question_id, sequence_order
-FROM (
-  SELECT id AS question_id, ROW_NUMBER() OVER (ORDER BY random()) AS sequence_order
-  FROM questions
-  WHERE category = 'faq'
-  ORDER BY random()
-  LIMIT 6
-) faq
-JOIN (
-  SELECT id AS question_id, ROW_NUMBER() OVER (ORDER BY random()) AS sequence_order
-  FROM questions
-  WHERE category = 'trivia'
-  ORDER BY random()
-  LIMIT 4
-) trivia ON faq.sequence_order = trivia.sequence_order;
+SELECT $1, id, seq FROM shuffled;
+
 COMMIT;
 ```
 

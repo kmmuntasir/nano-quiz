@@ -13,19 +13,19 @@ CREATE TABLE IF NOT EXISTS users (
     employee_id VARCHAR(100) UNIQUE,
     started_at TIMESTAMPTZ,
     completed_at TIMESTAMPTZ,
-    score INT
+    score INT CHECK (score IS NULL OR (score >= 0 AND score <= 10))
 );
 
 -- Table: questions
 CREATE TABLE IF NOT EXISTS questions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    category VARCHAR(50) NOT NULL,
+    category VARCHAR(50) NOT NULL CHECK (category IN ('faq', 'trivia')),
     question_text TEXT NOT NULL,
     opt_a VARCHAR(255) NOT NULL,
     opt_b VARCHAR(255) NOT NULL,
     opt_c VARCHAR(255) NOT NULL,
     opt_d VARCHAR(255) NOT NULL,
-    correct_opt CHAR(1) NOT NULL
+    correct_opt CHAR(1) NOT NULL CHECK (correct_opt IN ('A', 'B', 'C', 'D'))
 );
 
 -- Table: user_sessions
@@ -33,12 +33,13 @@ CREATE TABLE IF NOT EXISTS user_sessions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     question_id UUID NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
-    sequence_order INT NOT NULL,
-    user_answer CHAR(1)
+    sequence_order INT NOT NULL CHECK (sequence_order BETWEEN 1 AND 10),
+    user_answer CHAR(1) CHECK (user_answer IS NULL OR user_answer IN ('A', 'B', 'C', 'D')),
+    UNIQUE (user_id, sequence_order),
+    UNIQUE (user_id, question_id)
 );
 
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_questions_category ON questions(category);
-CREATE INDEX IF NOT EXISTS idx_user_sessions_user_id ON user_sessions(user_id);
-CREATE INDEX IF NOT EXISTS idx_users_score ON users(score DESC);
-CREATE INDEX IF NOT EXISTS idx_users_completed_at ON users(completed_at);
+CREATE INDEX IF NOT EXISTS idx_user_sessions_user_seq ON user_sessions(user_id, sequence_order);
+CREATE INDEX IF NOT EXISTS idx_users_leaderboard ON users(score DESC NULLS LAST) WHERE completed_at IS NOT NULL;
