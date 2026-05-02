@@ -160,6 +160,7 @@ CREATE TABLE users (
   email VARCHAR(255) UNIQUE NOT NULL,
   name VARCHAR(255) NOT NULL,
   employee_id VARCHAR(100) UNIQUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   started_at TIMESTAMPTZ,
   completed_at TIMESTAMPTZ,
   score INT CHECK (score IS NULL OR (score >= 0 AND score <= 10))
@@ -173,15 +174,17 @@ CREATE TABLE questions (
   opt_b VARCHAR(255) NOT NULL,
   opt_c VARCHAR(255) NOT NULL,
   opt_d VARCHAR(255) NOT NULL,
-  correct_opt CHAR(1) NOT NULL CHECK (correct_opt IN ('A', 'B', 'C', 'D'))
+  correct_opt CHAR(1) NOT NULL CHECK (correct_opt IN ('A', 'B', 'C', 'D')),
+  UNIQUE (category, question_text)
 );
 
 CREATE TABLE user_sessions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES users(id),
-  question_id UUID NOT NULL REFERENCES questions(id),
+  question_id UUID NOT NULL REFERENCES questions(id) ON DELETE RESTRICT,
   sequence_order INT NOT NULL CHECK (sequence_order BETWEEN 1 AND 10),
   user_answer CHAR(1) CHECK (user_answer IS NULL OR user_answer IN ('A', 'B', 'C', 'D')),
+  answered_at TIMESTAMPTZ,
   UNIQUE (user_id, sequence_order),
   UNIQUE (user_id, question_id)
 );
@@ -232,7 +235,7 @@ Implement the data seeding functionality that reads question JSON files from the
 ```sql
 INSERT INTO questions (category, question_text, opt_a, opt_b, opt_c, opt_d, correct_opt)
 VALUES ($1, $2, $3, $4, $5, $6, $7)
-ON CONFLICT DO NOTHING;
+ON CONFLICT (category, question_text) DO NOTHING;
 ```
 
 ---
@@ -423,7 +426,9 @@ Implement the `/api/quiz/answer` endpoint that saves the user's answer for a giv
 
 - [ ] Endpoint `POST /api/quiz/answer` accepts `{ sequence_order: 3, answer: "C" }`
 - [ ] Updates `user_answer` in `user_sessions` table
+- [ ] Records `answered_at` using PostgreSQL `NOW()`
 - [ ] Validates answer is A, B, C, or D
+- [ ] **Rejects if answer already exists for this sequence** (409 Conflict)
 - [ ] Returns success confirmation
 
 ---
@@ -464,7 +469,7 @@ WHERE us.user_id = $1 AND us.user_answer = q.correct_opt;
 
 **Description:**
 
-Implement the `/api/admin/leaderboard` endpoint that returns ranked user scores.
+Implement the `/api/leaderboard` endpoint that returns ranked user scores.
 
 **Dependencies:**
 
@@ -472,7 +477,7 @@ Implement the `/api/admin/leaderboard` endpoint that returns ranked user scores.
 
 **Acceptance Criteria:**
 
-- [ ] Endpoint `GET /api/admin/leaderboard` returns ranked list
+- [ ] Endpoint `GET /api/leaderboard` returns ranked list
 - [ ] Sorted by `score` DESC
 - [ ] Ties broken by `(completed_at - started_at)` ASC
 - [ ] Returns user name, score, and duration

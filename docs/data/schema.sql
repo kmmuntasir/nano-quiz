@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS users (
     email VARCHAR(255) UNIQUE NOT NULL,
     name VARCHAR(255) NOT NULL,
     employee_id VARCHAR(100) UNIQUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     started_at TIMESTAMPTZ,
     completed_at TIMESTAMPTZ,
     score INT CHECK (score IS NULL OR (score >= 0 AND score <= 10))
@@ -25,16 +26,18 @@ CREATE TABLE IF NOT EXISTS questions (
     opt_b VARCHAR(255) NOT NULL,
     opt_c VARCHAR(255) NOT NULL,
     opt_d VARCHAR(255) NOT NULL,
-    correct_opt CHAR(1) NOT NULL CHECK (correct_opt IN ('A', 'B', 'C', 'D'))
+    correct_opt CHAR(1) NOT NULL CHECK (correct_opt IN ('A', 'B', 'C', 'D')),
+    UNIQUE (category, question_text)
 );
 
 -- Table: user_sessions
 CREATE TABLE IF NOT EXISTS user_sessions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    question_id UUID NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
+    question_id UUID NOT NULL REFERENCES questions(id) ON DELETE RESTRICT,
     sequence_order INT NOT NULL CHECK (sequence_order BETWEEN 1 AND 10),
     user_answer CHAR(1) CHECK (user_answer IS NULL OR user_answer IN ('A', 'B', 'C', 'D')),
+    answered_at TIMESTAMPTZ,
     UNIQUE (user_id, sequence_order),
     UNIQUE (user_id, question_id)
 );

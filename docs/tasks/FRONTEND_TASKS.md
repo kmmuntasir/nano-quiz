@@ -136,7 +136,7 @@ Create a centralized API client using Axios with interceptors for authentication
 - [ ] Global error handler displays user-friendly messages
 - [ ] React Context for auth state is created (`AuthContext`) tracking user, token, and onboarding status
 - [ ] `useAuth()` hook exposes `user`, `token`, `isAuthenticated`, `login()`, `logout()` methods
-- [ ] Auth state is persisted and rehydrated from localStorage on app load
+- [ ] Auth state is persisted in localStorage, rehydrated on app load, and quiz resumes from last unanswered question via `GET /api/quiz/status`
 
 **Implementation Notes:**
 
@@ -398,7 +398,7 @@ Create the leaderboard page displaying ranked user scores.
 
 **Acceptance Criteria:**
 
-- [ ] Fetches data via `GET /api/admin/leaderboard`
+- [ ] Fetches data via `GET /api/leaderboard`
 - [ ] Displays ranked list sorted by score DESC
 - [ ] Shows user name, score, and duration
 - [ ] Highlights current user's row
@@ -551,7 +551,7 @@ App
 | `/api/quiz/question/:sequence` | GET | T8 | → `{ sequence_order, question, options }` |
 | `/api/quiz/answer` | POST | T9 | `{ sequence_order, answer }` → `{ success }` |
 | `/api/quiz/submit` | POST | T10 | → `{ success }` |
-| `/api/admin/leaderboard` | GET | T11 | → `[ { rank, name, employee_id, score, duration_seconds } ]` |
+| `/api/leaderboard` | GET | T11 | → `[ { rank, name, employee_id, score, duration_seconds } ]` |
 
 ---
 

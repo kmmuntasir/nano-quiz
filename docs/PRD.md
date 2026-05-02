@@ -61,7 +61,7 @@ The backend repository will contain a `/data` directory expecting two files:
 
 ### 4.2 Automated Seeding Script
 
-The backend `package.json` will include a script (`npm run seed`). When executed, it will parse the JSON files, format them, and insert them into the PostgreSQL `questions` table, tagging them with the appropriate category (`faq` or `trivia`).
+The backend `package.json` will include a script (`npm run seed`). When executed, it will parse the JSON files, format them, and insert them into the PostgreSQL `questions` table, tagging them with the appropriate category (`faq` or `trivia`). Seeding is idempotent — re-running it will skip questions that already exist (matched by category + question text).
 
 ## 5\. User Flow & Functional Requirements
 
@@ -102,6 +102,7 @@ The backend `package.json` will include a script (`npm run seed`). When executed
 | `email` | VARCHAR(255) | UNIQUE, NOT NULL | User's email. |
 | `name` | VARCHAR(255) | NOT NULL | User's display name. |
 | `employee_id` | VARCHAR(100) | UNIQUE, NULLABLE | Filled during onboarding. |
+| `created_at` | TIMESTAMPTZ | NOT NULL, Default NOW() | When the user record was created. |
 | `started_at` | TIMESTAMPTZ | NULL | Server time when quiz begins. |
 | `completed_at` | TIMESTAMPTZ | NULL | Server time when final answer submitted. |
 | `score` | INT | NULL | Final score (0-10). |
@@ -118,6 +119,7 @@ The backend `package.json` will include a script (`npm run seed`). When executed
 | `opt_c` | VARCHAR(255) | NOT NULL | Option C text. |
 | `opt_d` | VARCHAR(255) | NOT NULL | Option D text. |
 | `correct_opt` | CHAR(1) | NOT NULL | 'A', 'B', 'C', or 'D'. |
+| * | * | UNIQUE (category, question_text) | Prevents duplicate questions within a category. |
 
 ### Table: `user_sessions`
 
@@ -125,9 +127,10 @@ The backend `package.json` will include a script (`npm run seed`). When executed
 | --- | --- | --- | --- |
 | `id` | UUID | PRIMARY KEY, Default gen_uuid | Unique session row. |
 | `user_id` | UUID | FOREIGN KEY (users.id) | Links to the user. |
-| `question_id` | UUID | FOREIGN KEY (questions.id) | Links to the specific question. |
+| `question_id` | UUID | FOREIGN KEY (questions.id), ON DELETE RESTRICT | Links to the specific question. Prevents accidental question deletion if sessions exist. |
 | `sequence_order` | INT | NOT NULL | Display order (1 through 10). |
 | `user_answer` | CHAR(1) | NULL | User's submitted answer ('A', 'B', etc.). |
+| `answered_at` | TIMESTAMPTZ | NULL | Server time when the answer was submitted. |
 
 ## 7\. API Endpoint Specifications
 
@@ -153,13 +156,13 @@ All endpoints under `/api/*` require a Bearer token (JWT issued by the Express b
     -   **Action:** Fetches a specific question for the user based on sequence order (1-10). **Must omit the `correct_opt` field from the response payload.**
 -   `POST /api/quiz/answer`
     -   **Payload:** `{ "sequence_order": 3, "answer": "C" }`
-    -   **Action:** Saves the user's answer to the `user_sessions` table.
+    -   **Action:** Saves the user's answer to the `user_sessions` table. **Must reject if an answer already exists for this sequence** (no overwriting). Records `answered_at` using PostgreSQL `NOW()`.
 -   `POST /api/quiz/submit`
     -   **Action:** Logs `completed_at`. Calculates score by joining `user_sessions` with `questions`. Updates user `score`. Returns final confirmation (not the score).
 
-### 7.3 Admin Routes
+### 7.3 Leaderboard Routes
 
--   `GET /api/admin/leaderboard`
+-   `GET /api/leaderboard`
     -   **Action:** Returns the ranked list of users, sorted by `score` DESC, then by `(completed_at - started_at)` ASC.
 
 ## 8\. Environment Variables
