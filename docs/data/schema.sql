@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS users (
     started_at TIMESTAMPTZ,
     completed_at TIMESTAMPTZ,
     score INT CHECK (score IS NULL OR (score >= 0 AND score <= 10)),
+    duration_seconds INT CHECK (duration_seconds IS NULL OR duration_seconds >= 0), -- Persisted on quiz completion for fast leaderboard queries
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

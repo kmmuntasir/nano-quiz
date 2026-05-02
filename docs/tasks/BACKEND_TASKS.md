@@ -184,6 +184,34 @@ Implement the data seeding functionality that reads question JSON files from the
 - [ ] Inserts all questions into `questions` table
 - [ ] `npm run seed` executes successfully
 - [ ] Supports idempotent seeding (can re-run without duplicates)
+- [ ] Sample JSON files provided in `backend/data/` for local testing
+
+**Sample JSON Files:**
+
+For local development, create these files in `backend/data/`:
+
+```
+backend/data/
+├── faq_questions.json      # Sample FAQ questions (min 6 for testing)
+└── trivia_questions.json  # Sample trivia questions (min 4 for testing)
+```
+
+Example content:
+
+```json
+[
+  {
+    "question": "What year was the company founded?",
+    "options": {
+      "A": "2018",
+      "B": "2019",
+      "C": "2020",
+      "D": "2021"
+    },
+    "correct_option": "B"
+  }
+]
+```
 
 **JSON Schema:**
 
@@ -470,7 +498,7 @@ Implement the `/api/quiz/answer` endpoint that saves the user's answer for a giv
 - [ ] **Rejects if answer already exists for this sequence** (409 Conflict)
 - [ ] **Enforces sequential ordering:** rejects if any prior sequence is unanswered (409 Conflict) — prevents a user from skipping ahead via direct API calls
 - [ ] Returns success confirmation
-- [ ] **When `sequence_order` is 10:** also logs `completed_at`, calculates score, updates `score` in `users` table, and returns completion confirmation **with the final score**
+- [ ] **When `sequence_order` is 10:** also logs `completed_at`, calculates score, updates `score` and `duration_seconds` in `users` table, and returns completion confirmation **with the final score**
 
 **Completion Response (Q10):**
 
@@ -485,10 +513,18 @@ Implement the `/api/quiz/answer` endpoint that saves the user's answer for a giv
 **Score Calculation (triggered on Q10):**
 
 ```sql
+-- Calculate score
 SELECT COUNT(*) AS score
 FROM user_sessions us
 JOIN questions q ON us.question_id = q.id
 WHERE us.user_id = $1 AND us.user_answer = q.correct_opt;
+
+-- Calculate duration_seconds and update users table
+UPDATE users
+SET score = $calculated_score,
+    completed_at = NOW(),
+    duration_seconds = EXTRACT(EPOCH FROM (NOW() - started_at))::INT
+WHERE id = $1;
 ```
 
 ---
@@ -509,8 +545,8 @@ Implement the `/api/leaderboard` endpoint that returns ranked user scores.
 
 - [ ] Endpoint `GET /api/leaderboard` returns ranked list
 - [ ] Sorted by `score` DESC
-- [ ] Ties broken by `(completed_at - started_at)` ASC
-- [ ] Returns user name, score, and duration
+- [ ] Ties broken by `duration_seconds` ASC
+- [ ] Returns user name, score, and duration from `users.duration_seconds` column (persisted on quiz completion)
 
 **Response Schema:**
 

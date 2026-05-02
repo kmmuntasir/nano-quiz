@@ -374,7 +374,7 @@ VITE_GOOGLE_CLIENT_ID=your_google_client_id.apps.googleusercontent.com
 
 **Description:**
 
-Verify that Backend CORS is properly configured to accept only the Netlify frontend URL. **Note:** The actual CORS middleware implementation is handled in Backend T12 (Security phase). This task verifies the deployment configuration is correct.
+Verify that Backend CORS is properly configured to accept only the Netlify frontend URL. **Note:** The actual CORS middleware implementation is handled in Backend Phase 6, T12 (Security phase - "Configure CORS Policy"). This task verifies the deployment configuration is correct.
 
 **Dependencies:**
 
