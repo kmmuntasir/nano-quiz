@@ -48,7 +48,7 @@ CREATE TABLE IF NOT EXISTS user_sessions (
 CREATE INDEX IF NOT EXISTS idx_questions_category ON questions(category);
 CREATE INDEX IF NOT EXISTS idx_user_sessions_user_seq ON user_sessions(user_id, sequence_order);
 CREATE INDEX IF NOT EXISTS idx_user_sessions_question_id ON user_sessions(question_id);
-CREATE INDEX IF NOT EXISTS idx_users_leaderboard ON users(score DESC NULLS LAST) WHERE completed_at IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_users_leaderboard ON users(score DESC NULLS LAST, (completed_at - started_at)) WHERE completed_at IS NOT NULL;
 
 -- Auto-update updated_at on users row changes
 CREATE OR REPLACE FUNCTION trigger_set_updated_at()

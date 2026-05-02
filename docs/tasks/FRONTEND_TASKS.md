@@ -114,6 +114,7 @@ Set up React Router with all required routes for the application.
 | `/onboard` | Onboarding | Auth + No Employee ID | Employee ID input |
 | `/quiz` | Quiz | Auth + Has Employee ID | Quiz container |
 | `/quiz/:sequence` | Question | Auth + Quiz Started | Individual question |
+| `/quiz/complete` | Completion | Auth + Quiz Completed | Score display and leaderboard link |
 | `/leaderboard` | Leaderboard | Auth | Score rankings |
 
 ---
@@ -367,7 +368,7 @@ Create the answer submission logic that saves the user's answer and advances to 
 
 **Description:**
 
-Create the completion screen shown after answering question 10. The quiz is already finalized by the answer endpoint — this screen just shows the confirmation.
+Create the completion screen shown after answering question 10. The answer endpoint finalizes the quiz and returns the final score — this screen displays it to the user.
 
 **Dependencies:**
 
@@ -375,7 +376,8 @@ Create the completion screen shown after answering question 10. The quiz is alre
 
 **Acceptance Criteria:**
 
-- [ ] Triggered after Q10 answer submission succeeds (the answer endpoint handles scoring and completion)
+- [ ] Triggered after Q10 answer submission succeeds, navigates to `/quiz/complete`
+- [ ] Displays the final score returned by the answer endpoint (e.g., "You scored 8 out of 10!")
 - [ ] Shows confirmation message
 - [ ] Provides link to leaderboard
 - [ ] No option to retake quiz (PRD: strictly single attempt)
@@ -549,7 +551,7 @@ App
 | `/api/quiz/status` | GET | T6 | → `{ started, completed, current_sequence }` |
 | `/api/quiz/start` | POST | T7 | → `{ success }` |
 | `/api/quiz/question/:sequence` | GET | T8 | → `{ sequence_order, question, options }` |
-| `/api/quiz/answer` | POST | T9 | `{ sequence_order, answer }` → `{ success }` (Q10 also finalizes quiz) |
+| `/api/quiz/answer` | POST | T9 | `{ sequence_order, answer }` → `{ success }` (Q1–Q9) / `{ success, completed, score }` (Q10) |
 | `/api/leaderboard` | GET | T11 | → `[ { rank, name, employee_id, score, duration_seconds } ]` |
 
 ---

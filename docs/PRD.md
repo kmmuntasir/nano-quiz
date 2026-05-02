@@ -86,7 +86,7 @@ The backend `package.json` will include a script (`npm run seed`). When executed
 
 ### 5.4 Submission & Leaderboard
 
--   **Final Step:** The 10th question presents a "Submit Quiz" button instead of "Next". When the user answers the 10th question, the answer endpoint automatically logs `completed_at`, calculates the score, and marks the quiz as completed. No separate submit endpoint exists.
+-   **Final Step:** The 10th question presents a "Submit Quiz" button instead of "Next". When the user answers the 10th question, the answer endpoint automatically logs `completed_at`, calculates the score, and marks the quiz as completed. The endpoint returns the final score to the frontend for immediate display. No separate submit endpoint exists.
 -   **Scoring:** The backend calculates the total correct answers by joining `user_sessions` with `questions` and updates the `score` column in the `users` table.
 -   **Leaderboard Mechanics:** Scores are ranked descending. Ties are broken by the lowest duration (`completed_at - started_at`).
 
@@ -118,7 +118,7 @@ All endpoints under `/api/*` require a Bearer token (JWT issued by the Express b
     -   **Action:** Fetches a specific question for the user based on sequence order (1-10). **Must omit the `correct_opt` field from the response payload.**
 -   `POST /api/quiz/answer`
     -   **Payload:** `{ "sequence_order": 3, "answer": "C" }`
-    -   **Action:** Saves the user's answer to the `user_sessions` table. **Must reject if an answer already exists for this sequence** (no overwriting). Records `answered_at` using PostgreSQL `NOW()`. **When `sequence_order` is 10**, this endpoint also logs `completed_at`, calculates the score by joining `user_sessions` with `questions`, updates the user's `score`, and returns a completion confirmation (not the score).
+    -   **Action:** Saves the user's answer to the `user_sessions` table. **Must reject if an answer already exists for this sequence** (no overwriting). Records `answered_at` using PostgreSQL `NOW()`. **When `sequence_order` is 10**, this endpoint also logs `completed_at`, calculates the score by joining `user_sessions` with `questions`, updates the user's `score`, and returns a completion confirmation with the final score.
 
 ### 7.3 Leaderboard Routes
 

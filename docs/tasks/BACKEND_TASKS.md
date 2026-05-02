@@ -382,6 +382,7 @@ Implement the `/api/quiz/question/:sequence` endpoint that retrieves a specific 
 - [ ] Parameter `sequence` is between 1-10
 - [ ] **Response MUST NOT contain `correct_opt` field**
 - [ ] Returns 404 if sequence invalid or not found
+- [ ] **Enforces no-backtracking:** rejects with `403 Forbidden` if the requested sequence has already been answered (`user_answer IS NOT NULL`) — per PRD Section 5.3, "previous questions cannot be revisited or altered"
 
 **Response Schema:**
 
@@ -420,7 +421,17 @@ Implement the `/api/quiz/answer` endpoint that saves the user's answer for a giv
 - [ ] **Rejects if answer already exists for this sequence** (409 Conflict)
 - [ ] **Enforces sequential ordering:** rejects if any prior sequence is unanswered (409 Conflict) — prevents a user from skipping ahead via direct API calls
 - [ ] Returns success confirmation
-- [ ] **When `sequence_order` is 10:** also logs `completed_at`, calculates score, updates `score` in `users` table, and returns completion confirmation (not the score)
+- [ ] **When `sequence_order` is 10:** also logs `completed_at`, calculates score, updates `score` in `users` table, and returns completion confirmation **with the final score**
+
+**Completion Response (Q10):**
+
+```json
+{
+  "success": true,
+  "completed": true,
+  "score": 8
+}
+```
 
 **Score Calculation (triggered on Q10):**
 
