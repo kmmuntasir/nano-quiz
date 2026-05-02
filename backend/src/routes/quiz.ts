@@ -214,4 +214,79 @@ router.post('/api/quiz/start', authenticate, async (req: AuthenticatedRequest, r
     }
 })
 
+router.get('/api/quiz/question/:sequence', authenticate, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+        const userId = req.userId!
+        const sequence = Number(req.params.sequence)
+
+        if (!Number.isInteger(sequence) || sequence < 1 || sequence > 10) {
+            res.status(404).json({ error: 'Invalid sequence number. Must be between 1 and 10.' })
+            return
+        }
+
+        // Check sequential access: find first unanswered question
+        const { rows: seqRows } = await query<{ current_seq: number | null }>(
+            'SELECT MIN(sequence_order) AS current_seq FROM user_sessions WHERE user_id = $1 AND user_answer IS NULL',
+            [userId],
+        )
+
+        const currentSeq = seqRows[0]?.current_seq ?? null
+
+        if (currentSeq === null) {
+            res.status(403).json({ error: 'Quiz already completed' })
+            return
+        }
+
+        if (sequence !== currentSeq) {
+            res.status(403).json({ error: `Must answer question ${currentSeq} first` })
+            return
+        }
+
+        // Fetch question, excluding correct_opt
+        const { rows } = await query<{
+            sequence_order: number
+            question_text: string
+            opt_a: string
+            opt_b: string
+            opt_c: string
+            opt_d: string
+        }>(
+            `SELECT us.sequence_order, q.question_text, q.opt_a, q.opt_b, q.opt_c, q.opt_d
+             FROM user_sessions us
+             JOIN questions q ON q.id = us.question_id
+             WHERE us.user_id = $1 AND us.sequence_order = $2`,
+            [userId, sequence],
+        )
+
+        if (rows.length === 0) {
+            res.status(404).json({ error: 'Question not found' })
+            return
+        }
+
+        const row = rows[0]
+
+        // Per-question timing: set viewed_at on first fetch
+        if (process.env.TRACK_PER_QUESTION_TIME === 'true') {
+            await query(
+                'UPDATE user_sessions SET viewed_at = NOW() WHERE user_id = $1 AND sequence_order = $2 AND viewed_at IS NULL',
+                [userId, sequence],
+            )
+        }
+
+        res.json({
+            sequence_order: row.sequence_order,
+            question: row.question_text,
+            options: {
+                A: row.opt_a,
+                B: row.opt_b,
+                C: row.opt_c,
+                D: row.opt_d,
+            },
+        })
+    } catch (err) {
+        console.error('Get question error:', err)
+        res.status(500).json({ error: 'Failed to fetch question' })
+    }
+})
+
 export default router
