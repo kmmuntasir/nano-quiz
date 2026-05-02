@@ -1,5 +1,7 @@
 import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import ErrorBoundary from './components/ErrorBoundary'
+import OfflineBanner from './components/OfflineBanner'
 import ProtectedRoute from './components/ProtectedRoute'
 
 const Login = lazy(() => import('./pages/Login'))
@@ -20,57 +22,60 @@ function PageLoader() {
 export default function App() {
     return (
         <BrowserRouter>
-            <Suspense fallback={<PageLoader />}>
-                <Routes>
-                    <Route path="/" element={<Login />} />
-                    <Route
-                        path="/onboard"
-                        element={
-                            <ProtectedRoute>
-                                <Onboarding />
-                            </ProtectedRoute>
-                        }
-                    />
-                    <Route
-                        path="/quiz"
-                        element={
-                            <ProtectedRoute requireEmployeeId>
-                                <QuizContainer />
-                            </ProtectedRoute>
-                        }
-                    />
-                    <Route
-                        path="/quiz/complete"
-                        element={
-                            <ProtectedRoute
-                                requireEmployeeId
-                                requireQuizCompleted
-                            >
-                                <CompletionScreen />
-                            </ProtectedRoute>
-                        }
-                    />
-                    <Route
-                        path="/quiz/:sequence"
-                        element={
-                            <ProtectedRoute
-                                requireEmployeeId
-                                requireQuizStarted
-                            >
-                                <Question />
-                            </ProtectedRoute>
-                        }
-                    />
-                    <Route
-                        path="/leaderboard"
-                        element={
-                            <ProtectedRoute>
-                                <LeaderboardPage />
-                            </ProtectedRoute>
-                        }
-                    />
-                </Routes>
-            </Suspense>
+            <ErrorBoundary>
+                <OfflineBanner />
+                <Suspense fallback={<PageLoader />}>
+                    <Routes>
+                        <Route path="/" element={<Login />} />
+                        <Route
+                            path="/onboard"
+                            element={
+                                <ProtectedRoute>
+                                    <Onboarding />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                            path="/quiz"
+                            element={
+                                <ProtectedRoute requireEmployeeId>
+                                    <QuizContainer />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                            path="/quiz/complete"
+                            element={
+                                <ProtectedRoute
+                                    requireEmployeeId
+                                    requireQuizCompleted
+                                >
+                                    <CompletionScreen />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                            path="/quiz/:sequence"
+                            element={
+                                <ProtectedRoute
+                                    requireEmployeeId
+                                    requireQuizStarted
+                                >
+                                    <Question />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                            path="/leaderboard"
+                            element={
+                                <ProtectedRoute>
+                                    <LeaderboardPage />
+                                </ProtectedRoute>
+                            }
+                        />
+                    </Routes>
+                </Suspense>
+            </ErrorBoundary>
         </BrowserRouter>
     )
 }

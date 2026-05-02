@@ -1,8 +1,10 @@
 import { setupServer } from 'msw/node'
 import { http, HttpResponse } from 'msw'
 
+const BASE = 'http://localhost:3000'
+
 export const handlers = [
-    http.post('/api/auth/google', async () => {
+    http.post(`${BASE}/api/auth/google`, async () => {
         return HttpResponse.json({
             token: 'test-jwt-token',
             user: {
@@ -14,7 +16,7 @@ export const handlers = [
         })
     }),
 
-    http.post('/api/auth/onboard', async () => {
+    http.post(`${BASE}/api/auth/onboard`, async () => {
         return HttpResponse.json({
             user: {
                 id: 'test-user-id',
@@ -25,21 +27,21 @@ export const handlers = [
         })
     }),
 
-    http.get('/api/quiz/status', () => {
+    http.get(`${BASE}/api/quiz/status`, () => {
         return HttpResponse.json({
             status: 'not_started',
             current_sequence: null,
         })
     }),
 
-    http.post('/api/quiz/start', () => {
+    http.post(`${BASE}/api/quiz/start`, () => {
         return HttpResponse.json({
             message: 'Quiz started',
             total_questions: 10,
         })
     }),
 
-    http.get('/api/quiz/question/:sequence', ({ params }) => {
+    http.get(`${BASE}/api/quiz/question/:sequence`, ({ params }) => {
         return HttpResponse.json({
             sequence: Number(params.sequence),
             question: 'Sample question text?',
@@ -50,11 +52,11 @@ export const handlers = [
         })
     }),
 
-    http.post('/api/quiz/answer', () => {
+    http.post(`${BASE}/api/quiz/answer`, () => {
         return HttpResponse.json({ message: 'Answer recorded' })
     }),
 
-    http.get('/api/leaderboard', () => {
+    http.get(`${BASE}/api/leaderboard`, () => {
         return HttpResponse.json({
             leaderboard: [
                 { rank: 1, name: 'User One', employee_id: 'EMP001', score: 10, duration_seconds: 120 },
