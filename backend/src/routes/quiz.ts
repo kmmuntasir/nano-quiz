@@ -1,5 +1,5 @@
 import { Router, type Response } from 'express'
-import { query } from '../db/index.js'
+import { query, getClient } from '../db/index.js'
 import { authenticate, type AuthenticatedRequest } from '../middleware/auth.js'
 
 const router = Router()
@@ -91,6 +91,126 @@ router.get('/api/quiz/status', authenticate, async (req: AuthenticatedRequest, r
     } catch (err) {
         console.error('Quiz status error:', err)
         res.status(500).json({ error: 'Failed to fetch quiz status' })
+    }
+})
+
+router.post('/api/quiz/start', authenticate, async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.userId!
+
+    try {
+        // Check onboarding
+        const { rows: userRows } = await query<{ employee_id: string | null; started_at: string | null }>(
+            'SELECT employee_id, started_at FROM users WHERE id = $1',
+            [userId],
+        )
+
+        if (userRows.length === 0) {
+            res.status(404).json({ error: 'User not found' })
+            return
+        }
+
+        if (userRows[0].employee_id === null) {
+            res.status(403).json({ error: 'Onboarding required before starting quiz' })
+            return
+        }
+
+        // Idempotent: return existing session if already started
+        if (userRows[0].started_at !== null) {
+            const { rows: sessions } = await query<{ sequence_order: number; question_id: string }>(
+                'SELECT sequence_order, question_id FROM user_sessions WHERE user_id = $1 ORDER BY sequence_order',
+                [userId],
+            )
+            res.json({
+                message: 'Quiz already started',
+                started_at: userRows[0].started_at,
+                total_questions: sessions.length,
+            })
+            return
+        }
+
+        // Validate question availability before transaction
+        const { rows: counts } = await query<{ category: string; count: string }>(
+            'SELECT category, COUNT(*)::text AS count FROM questions GROUP BY category',
+        )
+        const faqCount = Number(counts.find((r) => r.category === 'faq')?.count ?? 0)
+        const triviaCount = Number(counts.find((r) => r.category === 'trivia')?.count ?? 0)
+
+        if (faqCount < 6 || triviaCount < 4) {
+            res.status(503).json({
+                error: 'Insufficient questions available',
+                detail: { faq_required: 6, faq_available: faqCount, trivia_required: 4, trivia_available: triviaCount },
+            })
+            return
+        }
+
+        // Allocate questions in transaction
+        const client = await getClient()
+        try {
+            await client.query('BEGIN')
+
+            const updateResult = await client.query<{ started_at: string }>(
+                'UPDATE users SET started_at = NOW() WHERE id = $1 AND started_at IS NULL RETURNING started_at',
+                [userId],
+            )
+
+            if (updateResult.rowCount === 0) {
+                await client.query('ROLLBACK')
+
+                const { rows: existing } = await query<{ started_at: string }>(
+                    'SELECT started_at FROM users WHERE id = $1',
+                    [userId],
+                )
+                const { rows: sessions } = await query<{ sequence_order: number }>(
+                    'SELECT sequence_order FROM user_sessions WHERE user_id = $1 ORDER BY sequence_order',
+                    [userId],
+                )
+                res.json({
+                    message: 'Quiz already started',
+                    started_at: existing[0]?.started_at ?? null,
+                    total_questions: sessions.length,
+                })
+                return
+            }
+
+            await client.query(
+                `WITH selected_faq AS (
+                    SELECT id FROM questions WHERE category = 'faq' ORDER BY RANDOM() LIMIT 6
+                ),
+                selected_trivia AS (
+                    SELECT id FROM questions WHERE category = 'trivia' ORDER BY RANDOM() LIMIT 4
+                ),
+                all_questions AS (
+                    SELECT id FROM selected_faq
+                    UNION ALL
+                    SELECT id FROM selected_trivia
+                ),
+                shuffled AS (
+                    SELECT id, ROW_NUMBER() OVER (ORDER BY RANDOM()) AS seq
+                    FROM all_questions
+                )
+                INSERT INTO user_sessions (user_id, question_id, sequence_order)
+                SELECT $1, id, seq FROM shuffled`,
+                [userId],
+            )
+
+            await client.query('COMMIT')
+
+            const startedAt = updateResult.rows[0].started_at
+
+            res.json({
+                message: 'Quiz started',
+                started_at: startedAt,
+                total_questions: 10,
+            })
+        } catch (err) {
+            await client.query('ROLLBACK')
+            throw err
+        } finally {
+            client.release()
+        }
+    } catch (err) {
+        console.error('Quiz start error:', err)
+        res.status(500).json({ error: 'Failed to start quiz' })
     }
 })
 
