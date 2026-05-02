@@ -227,6 +227,7 @@ Implement the `/api/auth/google` endpoint that verifies the Google JWT token, cr
 - [ ] Creates new user if not exists (extracts google_id, email, name)
 - [ ] Returns JWT, user object, onboarding status
 - [ ] Validates domain if `RESTRICT_DOMAIN` is set
+- [ ] Issues JWT with `expiresIn: '2h'` (per PRD Section 9.5 — accommodates quiz duration plus crash/resume buffer)
 
 **Response Schema:**
 
