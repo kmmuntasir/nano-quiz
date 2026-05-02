@@ -86,51 +86,13 @@ The backend `package.json` will include a script (`npm run seed`). When executed
 
 ### 5.4 Submission & Leaderboard
 
--   **Final Step:** The 10th question presents a "Submit Quiz" button instead of "Next".
--   **Clock Stop:** Clicking Submit logs the `completed_at` timestamp.
--   **Scoring:** The backend calculates the total correct answers, updates the `score` column in the `users` table, and marks the quiz status as `completed`.
+-   **Final Step:** The 10th question presents a "Submit Quiz" button instead of "Next". When the user answers the 10th question, the answer endpoint automatically logs `completed_at`, calculates the score, and marks the quiz as completed. No separate submit endpoint exists.
+-   **Scoring:** The backend calculates the total correct answers by joining `user_sessions` with `questions` and updates the `score` column in the `users` table.
 -   **Leaderboard Mechanics:** Scores are ranked descending. Ties are broken by the lowest duration (`completed_at - started_at`).
 
 ## 6\. PostgreSQL Database Schema
 
-### Table: `users`
-
-| Column Name | Type | Constraints | Description |
-| --- | --- | --- | --- |
-| `id` | UUID | PRIMARY KEY, Default gen_uuid | Unique user identifier. |
-| `google_id` | VARCHAR(255) | UNIQUE, NOT NULL | Extracted from Google OAuth sub claim. |
-| `email` | VARCHAR(255) | UNIQUE, NOT NULL | User's email. |
-| `name` | VARCHAR(255) | NOT NULL | User's display name. |
-| `employee_id` | VARCHAR(100) | UNIQUE, NULLABLE | Filled during onboarding. |
-| `created_at` | TIMESTAMPTZ | NOT NULL, Default NOW() | When the user record was created. |
-| `started_at` | TIMESTAMPTZ | NULL | Server time when quiz begins. |
-| `completed_at` | TIMESTAMPTZ | NULL | Server time when final answer submitted. |
-| `score` | INT | NULL | Final score (0-10). |
-
-### Table: `questions`
-
-| Column Name | Type | Constraints | Description |
-| --- | --- | --- | --- |
-| `id` | UUID | PRIMARY KEY, Default gen_uuid | Unique question ID. |
-| `category` | VARCHAR(50) | NOT NULL | 'faq' or 'trivia'. |
-| `question_text` | TEXT | NOT NULL | The question. |
-| `opt_a` | VARCHAR(255) | NOT NULL | Option A text. |
-| `opt_b` | VARCHAR(255) | NOT NULL | Option B text. |
-| `opt_c` | VARCHAR(255) | NOT NULL | Option C text. |
-| `opt_d` | VARCHAR(255) | NOT NULL | Option D text. |
-| `correct_opt` | CHAR(1) | NOT NULL | 'A', 'B', 'C', or 'D'. |
-| * | * | UNIQUE (category, question_text) | Prevents duplicate questions within a category. |
-
-### Table: `user_sessions`
-
-| Column Name | Type | Constraints | Description |
-| --- | --- | --- | --- |
-| `id` | UUID | PRIMARY KEY, Default gen_uuid | Unique session row. |
-| `user_id` | UUID | FOREIGN KEY (users.id) | Links to the user. |
-| `question_id` | UUID | FOREIGN KEY (questions.id), ON DELETE RESTRICT | Links to the specific question. Prevents accidental question deletion if sessions exist. |
-| `sequence_order` | INT | NOT NULL | Display order (1 through 10). |
-| `user_answer` | CHAR(1) | NULL | User's submitted answer ('A', 'B', etc.). |
-| `answered_at` | TIMESTAMPTZ | NULL | Server time when the answer was submitted. |
+The canonical schema is defined in [`docs/data/schema.sql`](data/schema.sql). That file contains the DDL for all three tables (`users`, `questions`, `user_sessions`) including constraints, foreign keys, and indexes.
 
 ## 7\. API Endpoint Specifications
 
@@ -156,9 +118,7 @@ All endpoints under `/api/*` require a Bearer token (JWT issued by the Express b
     -   **Action:** Fetches a specific question for the user based on sequence order (1-10). **Must omit the `correct_opt` field from the response payload.**
 -   `POST /api/quiz/answer`
     -   **Payload:** `{ "sequence_order": 3, "answer": "C" }`
-    -   **Action:** Saves the user's answer to the `user_sessions` table. **Must reject if an answer already exists for this sequence** (no overwriting). Records `answered_at` using PostgreSQL `NOW()`.
--   `POST /api/quiz/submit`
-    -   **Action:** Logs `completed_at`. Calculates score by joining `user_sessions` with `questions`. Updates user `score`. Returns final confirmation (not the score).
+    -   **Action:** Saves the user's answer to the `user_sessions` table. **Must reject if an answer already exists for this sequence** (no overwriting). Records `answered_at` using PostgreSQL `NOW()`. **When `sequence_order` is 10**, this endpoint also logs `completed_at`, calculates the score by joining `user_sessions` with `questions`, updates the user's `score`, and returns a completion confirmation (not the score).
 
 ### 7.3 Leaderboard Routes
 
@@ -188,7 +148,7 @@ VITE_GOOGLE_CLIENT_ID=your_google_client_id.apps.googleusercontent.com
 
 ## 9\. Security & Edge Cases
 
-1.  **Network Peeking Mitigation:** The API must _never_ send the `correct_opt` field to the frontend. Validation and scoring happen entirely on the server upon final submission.
-2.  **Time Tampering Mitigation:** Time taken is calculated entirely via PostgreSQL functions `NOW()` upon initiation and submission. Client-side timestamps are fully ignored to prevent cheating via system clock manipulation.
+1.  **Network Peeking Mitigation:** The API must _never_ send the `correct_opt` field to the frontend. Validation and scoring happen entirely on the server — scoring is triggered when the 10th answer is submitted.
+2.  **Time Tampering Mitigation:** Time taken is calculated entirely via PostgreSQL functions `NOW()` upon initiation and completion. Client-side timestamps are fully ignored to prevent cheating via system clock manipulation.
 3.  **Late Submissions:** Every quiz API endpoint must check the current server time against `EVENT_DEADLINE_ISO`. If the deadline has passed, the API must return `403 Forbidden` with a message "The event has concluded."
 4.  **Idempotency:** The `/api/quiz/start` endpoint must verify if a user already has a `started_at` timestamp. If they do, it must abort the database write to prevent overwriting their original question set and resetting their timer.

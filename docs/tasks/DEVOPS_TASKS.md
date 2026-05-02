@@ -63,28 +63,17 @@ Configure the local development environment for running both frontend and backen
 
 **Implementation:**
 
-```yaml
-# docker-compose.yml
-version: '3.8'
-services:
-  backend:
-    build: ./backend
-    ports:
-      - "3000:3000"
-    env_file:
-      - ./backend/.env
-    volumes:
-      - ./backend:/app
+Run both services locally with hot reload:
 
-  frontend:
-    build: ./frontend
-    ports:
-      - "5173:5173"
-    env_file:
-      - ./frontend/.env
-    volumes:
-      - ./frontend:/app
+```bash
+# Terminal 1 — Backend
+cd backend && npm run dev
+
+# Terminal 2 — Frontend
+cd frontend && npm run dev
 ```
+
+Both projects use `tsx` (backend) and Vite (frontend) for hot reload out of the box.
 
 ---
 
@@ -175,7 +164,7 @@ Apply the database schema to Supabase using the SQL file.
 
 **Methods:**
 
-1. **Supabase SQL Editor:** Copy-paste `sql/schema.sql`
+1. **Supabase SQL Editor:** Copy-paste `docs/data/schema.sql`
 2. **Migration tool:** Use Supabase CLI
 3. **Backend script:** Run schema via Node.js on first deploy
 
@@ -216,34 +205,40 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-          
+
       - name: Install backend dependencies
         run: |
           cd backend
           npm ci
-          
-      - name: Run lint
+
+      - name: Backend lint
         run: cd backend && npm run lint
-        
-      - name: Type check
+
+      - name: Backend type check
         run: cd backend && npm run typecheck
-        
+
       - name: Install frontend dependencies
         run: |
           cd frontend
           npm ci
-          
+
       - name: Frontend lint
         run: cd frontend && npm run lint
+
+      - name: Frontend type check
+        run: cd frontend && npm run typecheck
+
+      - name: Frontend build
+        run: cd frontend && npm run build
 ```
 
 ---
@@ -408,12 +403,16 @@ Configure the data seeding process for populating questions.
 **Directory Structure:**
 
 ```
+docs/
+├── data/
+│   └── schema.sql          # Canonical schema
+├── tasks/
+│   └── ...
+└── PRD.md
 backend/
 ├── data/
 │   ├── faq_questions.json
 │   └── trivia_questions.json
-├── sql/
-│   └── schema.sql
 └── package.json
 ```
 

@@ -343,7 +343,7 @@ Create the question display component showing one question at a time with answer
 
 **Description:**
 
-Create the answer submission logic that saves the user's answer and advances to the next question.
+Create the answer submission logic that saves the user's answer and advances to the next question. For questions 1–9, the answer is saved and the next question is fetched. For question 10, the answer endpoint also finalizes the quiz (scores, stops timer) — no separate submit call is needed.
 
 **Dependencies:**
 
@@ -352,12 +352,12 @@ Create the answer submission logic that saves the user's answer and advances to 
 **Acceptance Criteria:**
 
 - [ ] User selects an answer option
-- [ ] Clicking "Next" or "Submit" calls `POST /api/quiz/answer`
+- [ ] Clicking "Next" (Q1–Q9) or "Submit" (Q10) calls `POST /api/quiz/answer`
 - [ ] Payload: `{ sequence_order: 3, answer: "C" }`
-- [ ] On success: navigates to next question
-- [ ] On question 10: "Submit" button instead of "Next"
+- [ ] On success for Q1–Q9: navigates to next question via `GET /api/quiz/question/:next`
+- [ ] On success for Q10: navigates to completion screen (quiz is finalized by the answer endpoint)
 
-**PRD Reference:** Section 5.3
+**PRD Reference:** Section 5.3, 5.4
 
 **Edge Case:** No backtracking - once answer is submitted, user cannot return to previous question.
 
@@ -367,7 +367,7 @@ Create the answer submission logic that saves the user's answer and advances to 
 
 **Description:**
 
-Create the completion screen shown after quiz submission.
+Create the completion screen shown after answering question 10. The quiz is already finalized by the answer endpoint — this screen just shows the confirmation.
 
 **Dependencies:**
 
@@ -375,7 +375,7 @@ Create the completion screen shown after quiz submission.
 
 **Acceptance Criteria:**
 
-- [ ] Triggered after `POST /api/quiz/submit`
+- [ ] Triggered after Q10 answer submission succeeds (the answer endpoint handles scoring and completion)
 - [ ] Shows confirmation message
 - [ ] Provides link to leaderboard
 - [ ] No option to retake quiz (PRD: strictly single attempt)
@@ -549,8 +549,7 @@ App
 | `/api/quiz/status` | GET | T6 | → `{ started, completed, current_sequence }` |
 | `/api/quiz/start` | POST | T7 | → `{ success }` |
 | `/api/quiz/question/:sequence` | GET | T8 | → `{ sequence_order, question, options }` |
-| `/api/quiz/answer` | POST | T9 | `{ sequence_order, answer }` → `{ success }` |
-| `/api/quiz/submit` | POST | T10 | → `{ success }` |
+| `/api/quiz/answer` | POST | T9 | `{ sequence_order, answer }` → `{ success }` (Q10 also finalizes quiz) |
 | `/api/leaderboard` | GET | T11 | → `[ { rank, name, employee_id, score, duration_seconds } ]` |
 
 ---

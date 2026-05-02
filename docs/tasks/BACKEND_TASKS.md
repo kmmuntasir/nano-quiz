@@ -7,7 +7,7 @@
 3. [Phase 2: Database](#phase-2-database)
 4. [Phase 3: Authentication](#phase-3-authentication)
 5. [Phase 4: Quiz API](#phase-4-quiz-api)
-6. [Phase 5: Admin API](#phase-5-admin-api)
+6. [Phase 5: Leaderboard API](#phase-5-leaderboard-api)
 7. [Phase 6: Security](#phase-6-security)
 8. [Dependencies Matrix](#dependencies-matrix)
 
@@ -32,9 +32,9 @@ This document outlines the complete task breakdown for building the OpenQuiz bac
 | 1 | 2 | Project initialization and configuration |
 | 2 | 2 | Database connection, schema, and seeding |
 | 3 | 2 | Google OAuth and onboarding |
-| 4 | 5 | Quiz flow (status, start, question, answer, submit) |
+| 4 | 4 | Quiz flow (status, start, question, answer) |
 | 5 | 1 | Leaderboard endpoint |
-| 6 | 4 | Security middleware |
+| 6 | 3 | Security middleware |
 
 ---
 
@@ -132,7 +132,7 @@ Implement the database connection pool using the `pg` library. Create a centrali
 - [ ] Can execute raw SQL queries
 - [ ] Connection errors are handled gracefully
 - [ ] Pool releases connections properly
-- [ ] `sql/schema.sql` file is created with CREATE TABLE statements for `users`, `questions`, and `user_sessions` matching PRD Section 6 exactly
+- [ ] Schema from `docs/data/schema.sql` is applied to create `users`, `questions`, and `user_sessions` tables matching PRD Section 6 exactly
 - [ ] Schema includes proper foreign keys, constraints, and indexes
 
 **Implementation Notes:**
@@ -151,47 +151,13 @@ export const getClient = () => pool.connect();
 
 **Schema File:**
 
-Create `sql/schema.sql` with the three tables from PRD Section 6:
+The canonical schema lives at `docs/data/schema.sql`. Apply it to create all three tables:
 
-```sql
-CREATE TABLE users (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  google_id VARCHAR(255) UNIQUE NOT NULL,
-  email VARCHAR(255) UNIQUE NOT NULL,
-  name VARCHAR(255) NOT NULL,
-  employee_id VARCHAR(100) UNIQUE,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  started_at TIMESTAMPTZ,
-  completed_at TIMESTAMPTZ,
-  score INT CHECK (score IS NULL OR (score >= 0 AND score <= 10))
-);
-
-CREATE TABLE questions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  category VARCHAR(50) NOT NULL CHECK (category IN ('faq', 'trivia')),
-  question_text TEXT NOT NULL,
-  opt_a VARCHAR(255) NOT NULL,
-  opt_b VARCHAR(255) NOT NULL,
-  opt_c VARCHAR(255) NOT NULL,
-  opt_d VARCHAR(255) NOT NULL,
-  correct_opt CHAR(1) NOT NULL CHECK (correct_opt IN ('A', 'B', 'C', 'D')),
-  UNIQUE (category, question_text)
-);
-
-CREATE TABLE user_sessions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES users(id),
-  question_id UUID NOT NULL REFERENCES questions(id) ON DELETE RESTRICT,
-  sequence_order INT NOT NULL CHECK (sequence_order BETWEEN 1 AND 10),
-  user_answer CHAR(1) CHECK (user_answer IS NULL OR user_answer IN ('A', 'B', 'C', 'D')),
-  answered_at TIMESTAMPTZ,
-  UNIQUE (user_id, sequence_order),
-  UNIQUE (user_id, question_id)
-);
-
-CREATE INDEX idx_user_sessions_user_seq ON user_sessions(user_id, sequence_order);
-CREATE INDEX idx_questions_category ON questions(category);
+```bash
+psql $SUPABASE_DB_URL -f docs/data/schema.sql
 ```
+
+See `docs/data/schema.sql` for the full DDL (tables, constraints, indexes).
 
 ---
 
@@ -294,6 +260,7 @@ Implement the `/api/auth/onboard` endpoint that saves the user's employee ID dur
 - [ ] Updates `employee_id` in users table
 - [ ] Returns success confirmation
 - [ ] Rejects if employee_id is already taken
+- [ ] Rejects if user already has an employee_id set (prevents re-onboarding / ID changes)
 
 ---
 
@@ -347,13 +314,15 @@ Implement the `/api/quiz/start` endpoint that allocates 10 random questions and 
 - [ ] Selects 4 random questions where `category='trivia'`
 - [ ] Writes to `user_sessions` with randomized `sequence_order` (1-10)
 - [ ] Records `started_at` using PostgreSQL `NOW()`
-- [ ] Idempotent: aborts if user already has `started_at`
+- [ ] Idempotent: aborts if user already has `started_at`, returns existing session data without resetting the timer
 
 **Database Transaction:**
 
 ```sql
 BEGIN;
 UPDATE users SET started_at = NOW() WHERE id = $1 AND started_at IS NULL;
+-- Application code MUST check rowCount after UPDATE.
+-- If rowCount === 0, user already started → ROLLBACK and return existing session.
 
 WITH selected_faq AS (
   SELECT id FROM questions WHERE category = 'faq' ORDER BY RANDOM() LIMIT 6
@@ -416,7 +385,7 @@ Implement the `/api/quiz/question/:sequence` endpoint that retrieves a specific 
 
 **Description:**
 
-Implement the `/api/quiz/answer` endpoint that saves the user's answer for a given question sequence.
+Implement the `/api/quiz/answer` endpoint that saves the user's answer for a given question sequence. When the answer is for question 10 (the last question), this endpoint also finalizes the quiz: logs `completed_at`, calculates the score, and marks the quiz as completed.
 
 **Dependencies:**
 
@@ -426,33 +395,14 @@ Implement the `/api/quiz/answer` endpoint that saves the user's answer for a giv
 
 - [ ] Endpoint `POST /api/quiz/answer` accepts `{ sequence_order: 3, answer: "C" }`
 - [ ] Updates `user_answer` in `user_sessions` table
+- [ ] `user_id` MUST come from the verified JWT, never from the request body
 - [ ] Records `answered_at` using PostgreSQL `NOW()`
 - [ ] Validates answer is A, B, C, or D
 - [ ] **Rejects if answer already exists for this sequence** (409 Conflict)
 - [ ] Returns success confirmation
+- [ ] **When `sequence_order` is 10:** also logs `completed_at`, calculates score, updates `score` in `users` table, and returns completion confirmation (not the score)
 
----
-
-### T11: Implement Quiz Submit Endpoint
-
-**Description:**
-
-Implement the `/api/quiz/submit` endpoint that finalizes the quiz, calculates the score, and stops the timer.
-
-**Dependencies:**
-
-- T10
-
-**Acceptance Criteria:**
-
-- [ ] Endpoint `POST /api/quiz/submit` finalizes quiz
-- [ ] Records `completed_at` using PostgreSQL `NOW()`
-- [ ] Calculates score by joining `user_sessions` with `questions`
-- [ ] Updates `score` in `users` table
-- [ ] Marks quiz as completed
-- [ ] Returns confirmation (NOT the score)
-
-**Score Calculation:**
+**Score Calculation (triggered on Q10):**
 
 ```sql
 SELECT COUNT(*) AS score
@@ -463,9 +413,9 @@ WHERE us.user_id = $1 AND us.user_answer = q.correct_opt;
 
 ---
 
-## Phase 5: Admin API
+## Phase 5: Leaderboard API
 
-### T12: Implement Leaderboard Endpoint
+### T11: Implement Leaderboard Endpoint
 
 **Description:**
 
@@ -473,7 +423,7 @@ Implement the `/api/leaderboard` endpoint that returns ranked user scores.
 
 **Dependencies:**
 
-- T11
+- T10
 
 **Acceptance Criteria:**
 
@@ -500,7 +450,7 @@ Implement the `/api/leaderboard` endpoint that returns ranked user scores.
 
 ## Phase 6: Security
 
-### T13: Configure CORS Policy
+### T12: Configure CORS Policy
 
 **Description:**
 
@@ -518,7 +468,7 @@ Configure Express CORS to only accept requests from the configured `FRONTEND_URL
 
 ---
 
-### T14: Implement JWT Validation Middleware
+### T13: Implement JWT Validation Middleware
 
 **Description:**
 
@@ -537,7 +487,7 @@ Create middleware that validates JWT tokens on all protected routes.
 
 ---
 
-### T15: Implement Deadline Check Middleware
+### T14: Implement Deadline Check Middleware
 
 **Description:**
 
@@ -555,24 +505,6 @@ Create middleware that rejects requests after the event deadline.
 
 ---
 
-### T16: Implement Idempotency Check
-
-**Description:**
-
-Ensure `/api/quiz/start` cannot overwrite an existing session.
-
-**Dependencies:**
-
-- T7
-
-**Acceptance Criteria:**
-
-- [ ] If `started_at` exists, endpoint aborts
-- [ ] Returns existing session data
-- [ ] Timer is not reset
-
----
-
 ## Dependencies Matrix
 
 ```
@@ -584,16 +516,14 @@ T1  ─────┬──► T2 ─────┬──► T3 ────�
         │            │                        │
         │            └──────────────────────┼────────► T7
         │                                     │         │
-        │                                     │         └────────► T8 ─────► T9 ─────► T10 ─────► T11 ─────► T12
-        │                                     │                                     │
-        │                                     └─────────────────────────────────────┘
+        │                                     │         └────────► T8 ─────► T9 ─────► T10 ─────► T11
+        │                                     │
+        │                                     └──────────────────────────────────────────────────► T12
         │
         └──────────────────────────────────────┘
                                                 │
                                                 ├────────► T13
-                                                ├────────► T14
-                                                ├────────► T15
-                                                └────────► T16
+                                                └────────► T14
 ```
 
 **Legend:**
