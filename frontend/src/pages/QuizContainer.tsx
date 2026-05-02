@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import StartQuizButton from '../components/StartQuizButton'
 
 export default function QuizContainer() {
     const { quizStatus, refreshQuizStatus, loading } = useAuth()
@@ -59,13 +60,7 @@ export default function QuizContainer() {
                 <p className="text-secondary mb-6">
                     You are about to start the quiz. 10 questions, no going back.
                 </p>
-                {/* Start Quiz button to be implemented in T7 */}
-                <button
-                    className="px-6 py-3 bg-primary text-white rounded-lg opacity-50 cursor-not-allowed"
-                    disabled
-                >
-                    Start Quiz
-                </button>
+                <StartQuizButton />
             </div>
         </div>
     )
