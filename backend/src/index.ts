@@ -1,15 +1,16 @@
 import 'dotenv/config'
 import express from 'express'
-import cors from 'cors'
 import morgan from 'morgan'
 import healthRouter from './routes/health.js'
 import { closePool } from './db/index.js'
 import authRouter from './routes/auth.js'
+import { corsHandler, preflightHandler } from './middleware/cors.js'
 
 const app = express()
 const PORT = Number(process.env.PORT) || 3000
 
-app.use(cors({ origin: process.env.FRONTEND_URL }))
+app.use(preflightHandler)
+app.use(corsHandler)
 app.use(morgan('dev'))
 app.use(express.json())
 
