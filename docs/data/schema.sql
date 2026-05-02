@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS user_sessions (
     question_id UUID NOT NULL REFERENCES questions(id) ON DELETE RESTRICT,
     sequence_order INT NOT NULL CHECK (sequence_order BETWEEN 1 AND 10),
     user_answer CHAR(1) CHECK (user_answer IS NULL OR user_answer IN ('A', 'B', 'C', 'D')),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     answered_at TIMESTAMPTZ,
     UNIQUE (user_id, sequence_order),
     UNIQUE (user_id, question_id)
@@ -45,4 +46,5 @@ CREATE TABLE IF NOT EXISTS user_sessions (
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_questions_category ON questions(category);
 CREATE INDEX IF NOT EXISTS idx_user_sessions_user_seq ON user_sessions(user_id, sequence_order);
+CREATE INDEX IF NOT EXISTS idx_user_sessions_question_id ON user_sessions(question_id);
 CREATE INDEX IF NOT EXISTS idx_users_leaderboard ON users(score DESC NULLS LAST) WHERE completed_at IS NOT NULL;

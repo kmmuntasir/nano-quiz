@@ -305,7 +305,7 @@ FROM user_sessions
 WHERE user_id = $1 AND user_answer IS NULL;
 ```
 
-- If the result is `NULL` (all 10 answered), the quiz is completed. Set `completed: true` and also update `users.completed_at` as a safety net (normally set by the answer endpoint on Q10).
+- If the result is `NULL` (all 10 answered), the quiz is completed. Set `completed: true` and also update `users.completed_at` as a safety net (normally set by the answer endpoint on Q10). If `users.score IS NULL`, also recalculate the score using the same join query as T10.
 - If the user has no rows in `user_sessions`, return `started: false`.
 - If the user has a `started_at` but `current_sequence` is not NULL, return the sequence number for resumption.
 
@@ -329,6 +329,7 @@ Implement the `/api/quiz/start` endpoint that allocates 10 random questions and 
 - [ ] Writes to `user_sessions` with randomized `sequence_order` (1-10)
 - [ ] Records `started_at` using PostgreSQL `NOW()`
 - [ ] Validates that at least 6 `faq` and 4 `trivia` questions exist in the database; returns `503 Service Unavailable` with a descriptive message if not
+- [ ] Rejects with `403 Forbidden` if user has not completed onboarding (`employee_id IS NULL`)
 - [ ] Idempotent: aborts if user already has `started_at`, returns existing session data without resetting the timer
 
 **Database Transaction:**
@@ -414,6 +415,7 @@ Implement the `/api/quiz/answer` endpoint that saves the user's answer for a giv
 - [ ] Records `answered_at` using PostgreSQL `NOW()`
 - [ ] Validates answer is A, B, C, or D
 - [ ] **Rejects if answer already exists for this sequence** (409 Conflict)
+- [ ] **Enforces sequential ordering:** rejects if any prior sequence is unanswered (409 Conflict) — prevents a user from skipping ahead via direct API calls
 - [ ] Returns success confirmation
 - [ ] **When `sequence_order` is 10:** also logs `completed_at`, calculates score, updates `score` in `users` table, and returns completion confirmation (not the score)
 
