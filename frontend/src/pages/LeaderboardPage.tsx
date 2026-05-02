@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import api from '../api/client'
 import { useAuth } from '../hooks/useAuth'
 
@@ -16,18 +16,52 @@ function formatDuration(seconds: number): string {
     return `${m}:${s.toString().padStart(2, '0')}`
 }
 
+const REFRESH_INTERVAL_MS = 30_000
+
 export default function LeaderboardPage() {
     const { user } = useAuth()
     const [entries, setEntries] = useState<LeaderboardEntry[]>([])
     const [loading, setLoading] = useState(true)
+    const [refreshing, setRefreshing] = useState(false)
     const [error, setError] = useState<string | null>(null)
+    const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+    const fetchLeaderboard = useCallback(async (isRefresh = false) => {
+        if (isRefresh) {
+            setRefreshing(true)
+        } else {
+            setLoading(true)
+        }
+        setError(null)
+
+        try {
+            const res = await api.get<LeaderboardEntry[]>('/leaderboard')
+            setEntries(res.data)
+        } catch {
+            setError('Failed to load leaderboard.')
+        } finally {
+            setLoading(false)
+            setRefreshing(false)
+        }
+    }, [])
 
     useEffect(() => {
-        api.get<LeaderboardEntry[]>('/leaderboard')
-            .then((res) => setEntries(res.data))
-            .catch(() => setError('Failed to load leaderboard.'))
-            .finally(() => setLoading(false))
-    }, [])
+        fetchLeaderboard()
+
+        intervalRef.current = setInterval(() => {
+            fetchLeaderboard(true)
+        }, REFRESH_INTERVAL_MS)
+
+        return () => {
+            if (intervalRef.current) {
+                clearInterval(intervalRef.current)
+            }
+        }
+    }, [fetchLeaderboard])
+
+    const handleManualRefresh = () => {
+        fetchLeaderboard(true)
+    }
 
     if (loading) {
         return (
@@ -63,9 +97,34 @@ export default function LeaderboardPage() {
     return (
         <div className="min-h-screen bg-surface py-10 px-4">
             <div className="max-w-2xl mx-auto">
-                <h1 className="text-2xl font-bold text-primary mb-6 text-center">
-                    Leaderboard
-                </h1>
+                <div className="flex items-center justify-between mb-6">
+                    <h1 className="text-2xl font-bold text-primary text-center flex-1">
+                        Leaderboard
+                    </h1>
+                    <button
+                        onClick={handleManualRefresh}
+                        disabled={refreshing}
+                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-primary bg-primary-50 rounded-lg hover:bg-primary-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                        <svg
+                            className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`}
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                        >
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        Refresh
+                    </button>
+                </div>
+
+                {refreshing && (
+                    <div className="mb-4 h-1 bg-primary-100 rounded overflow-hidden">
+                        <div className="h-full bg-primary animate-pulse" />
+                    </div>
+                )}
+
                 <table className="w-full border-collapse">
                     <thead>
                         <tr className="text-left text-sm text-secondary border-b border-gray-200">

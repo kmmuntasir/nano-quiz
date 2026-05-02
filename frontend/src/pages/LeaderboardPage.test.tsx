@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { render, screen, waitFor, fireEvent, act } from '@testing-library/react'
 import LeaderboardPage from './LeaderboardPage'
 import { AuthContext } from '../contexts/AuthContext'
 
@@ -106,5 +106,72 @@ describe('LeaderboardPage', () => {
         await waitFor(() => {
             expect(screen.getByText('Failed to load leaderboard.')).toBeInTheDocument()
         })
+    })
+
+    it('has a manual refresh button', async () => {
+        mockApi.get.mockResolvedValueOnce({ data: mockEntries })
+        renderWithAuth()
+        await waitFor(() => {
+            expect(screen.getByText('Refresh')).toBeInTheDocument()
+        })
+    })
+
+    it('refreshes data when refresh button clicked', async () => {
+        mockApi.get.mockResolvedValue({ data: mockEntries })
+        renderWithAuth()
+        await waitFor(() => expect(mockApi.get).toHaveBeenCalledTimes(1))
+
+        await act(async () => {
+            fireEvent.click(screen.getByText('Refresh'))
+        })
+        await waitFor(() => expect(mockApi.get).toHaveBeenCalledTimes(2))
+    })
+})
+
+describe('LeaderboardPage auto-refresh', () => {
+    beforeEach(() => {
+        vi.useFakeTimers()
+        vi.clearAllMocks()
+        mockApi.get.mockResolvedValue({ data: [] })
+    })
+
+    afterEach(() => {
+        vi.useRealTimers()
+        vi.clearAllMocks()
+    })
+
+    it('auto-refreshes every 30 seconds', async () => {
+        renderWithAuth()
+
+        await act(async () => {
+            vi.advanceTimersByTime(0)
+        })
+        expect(mockApi.get).toHaveBeenCalledTimes(1)
+
+        await act(async () => {
+            vi.advanceTimersByTime(30_000)
+        })
+        expect(mockApi.get).toHaveBeenCalledTimes(2)
+
+        await act(async () => {
+            vi.advanceTimersByTime(30_000)
+        })
+        expect(mockApi.get).toHaveBeenCalledTimes(3)
+    })
+
+    it('stops auto-refresh on unmount', async () => {
+        const { unmount } = renderWithAuth()
+
+        await act(async () => {
+            vi.advanceTimersByTime(0)
+        })
+        expect(mockApi.get).toHaveBeenCalledTimes(1)
+
+        unmount()
+
+        await act(async () => {
+            vi.advanceTimersByTime(60_000)
+        })
+        expect(mockApi.get).toHaveBeenCalledTimes(1)
     })
 })
