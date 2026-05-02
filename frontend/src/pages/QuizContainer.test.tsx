@@ -1,9 +1,16 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { screen } from '@testing-library/react'
 import { render } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { AuthContext, type AuthState } from '../contexts/AuthContext'
 import QuizContainer from './QuizContainer'
+
+const mockNavigate = vi.fn()
+
+vi.mock('react-router-dom', async () => {
+    const actual = await vi.importActual('react-router-dom')
+    return { ...actual, useNavigate: () => mockNavigate }
+})
 
 function renderQuizContainer(overrides: Partial<AuthState> = {}) {
     const authValue: AuthState = {
@@ -30,6 +37,10 @@ function renderQuizContainer(overrides: Partial<AuthState> = {}) {
 }
 
 describe('QuizContainer', () => {
+    beforeEach(() => {
+        mockNavigate.mockClear()
+    })
+
     it('shows loading spinner when loading', () => {
         renderQuizContainer({ loading: true })
         expect(document.querySelector('.animate-spin')).toBeInTheDocument()
@@ -41,7 +52,7 @@ describe('QuizContainer', () => {
             refreshQuizStatus: async () => ({ started: false, completed: false }),
         })
         expect(screen.getByText('Ready?')).toBeInTheDocument()
-        expect(screen.getByText('Start Quiz').closest('button')).toBeDisabled()
+        expect(screen.getByText('Start Quiz').closest('button')).toBeEnabled()
     })
 
     it('shows completion message when quiz is completed', () => {
@@ -77,5 +88,21 @@ describe('QuizContainer', () => {
         })
         expect(screen.getByText('Quiz Completed!')).toBeInTheDocument()
         expect(screen.queryByText(/Your score/)).not.toBeInTheDocument()
+    })
+
+    it('redirects to current question when quiz in progress', () => {
+        renderQuizContainer({
+            quizStatus: {
+                started: true,
+                completed: false,
+                current_sequence: 5,
+            },
+            refreshQuizStatus: async () => ({
+                started: true,
+                completed: false,
+                current_sequence: 5,
+            }),
+        })
+        expect(mockNavigate).toHaveBeenCalledWith('/quiz/5', { replace: true })
     })
 })
