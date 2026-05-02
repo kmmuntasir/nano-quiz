@@ -82,6 +82,8 @@ The backend `package.json` will include a script (`npm run seed`). When executed
 -   **Pagination:** Users view one question at a time.
 -   **Progression:** Clicking "Next" saves the answer to the database. The frontend fetches the next question based on the sequence index.
 -   **No Backtracking:** Once an answer is submitted and the user moves to the next question, previous questions cannot be revisited or altered.
+-   **Sequential Access:** Users can only view the current unanswered question. The API rejects requests for any sequence other than the user's current position (first unanswered), preventing both backtracking to answered questions and jumping ahead to unanswered ones.
+-   **Per-Question Timing:** When `TRACK_PER_QUESTION_TIME` is enabled, the backend records when each question is first viewed (`viewed_at`). Per-question duration is calculated as `answered_at - viewed_at`. This data is available for admin analytics but does not affect scoring or the leaderboard.
 -   **Resumption:** If a user disconnects, upon re-login, the backend API `/api/quiz/status` checks the `user_sessions` table and returns the user to their first unanswered question.
 
 ### 5.4 Submission & Leaderboard
@@ -115,7 +117,7 @@ All endpoints under `/api/*` require a Bearer token (JWT issued by the Express b
 -   `POST /api/quiz/start`
     -   **Action:** Triggers the 10-question random allocation, writes to `user_sessions`, and records `started_at` in the database.
 -   `GET /api/quiz/question/:sequence`
-    -   **Action:** Fetches a specific question for the user based on sequence order (1-10). **Must omit the `correct_opt` field from the response payload.**
+    -   **Action:** Fetches a specific question for the user based on sequence order (1-10). **Must omit the `correct_opt` field from the response payload.** Must enforce sequential access — reject requests where the requested sequence is not the user's current position (first unanswered question), returning `403 Forbidden`.
 -   `POST /api/quiz/answer`
     -   **Payload:** `{ "sequence_order": 3, "answer": "C" }`
     -   **Action:** Saves the user's answer to the `user_sessions` table. **Must reject if an answer already exists for this sequence** (no overwriting). Records `answered_at` using PostgreSQL `NOW()`. **When `sequence_order` is 10**, this endpoint also logs `completed_at`, calculates the score by joining `user_sessions` with `questions`, updates the user's `score`, and returns a completion confirmation with the final score.
@@ -137,6 +139,7 @@ RESTRICT_DOMAIN=exabyting.com # Leave blank to allow any Gmail
 JWT_SECRET=super_secret_string_for_app_sessions
 SUPABASE_DB_URL=postgresql://postgres:[YOUR-PASSWORD]@db.[YOUR-PROJECT].supabase.co:5432/postgres
 EVENT_DEADLINE_ISO=2024-12-31T23:59:59Z # Stops accepting submissions after this time
+TRACK_PER_QUESTION_TIME=true # Record when each question is viewed (for per-question analytics)
 ```
 
 ### 8.2 Frontend (.env)
@@ -152,4 +155,6 @@ VITE_GOOGLE_CLIENT_ID=your_google_client_id.apps.googleusercontent.com
 2.  **Time Tampering Mitigation:** Time taken is calculated entirely via PostgreSQL functions `NOW()` upon initiation and completion. Client-side timestamps are fully ignored to prevent cheating via system clock manipulation.
 3.  **Late Submissions:** Every quiz API endpoint must check the current server time against `EVENT_DEADLINE_ISO`. If the deadline has passed, the API must return `403 Forbidden` with a message "The event has concluded."
 4.  **Idempotency:** The `/api/quiz/start` endpoint must verify if a user already has a `started_at` timestamp. If they do, it must abort the database write to prevent overwriting their original question set and resetting their timer.
-5.  **JWT Token Expiration:** Application JWTs issued after Google OAuth verification must include an `expiresIn` of **2 hours**. This window accommodates the expected quiz duration (~10–30 minutes) plus a buffer for browser crashes and session resumption, while preventing indefinite token validity. Expired tokens must return `401 Unauthorized` (handled by the JWT validation middleware).
+5.  **DB-Level Single-Attempt Constraint:** A database trigger (`prevent_multiple_quiz_attempts`) blocks inserts into `user_sessions` if the user already has 10 session rows or has `completed_at` set. This provides defense-in-depth beyond the application-level `started_at` check.
+6.  **Sequential Access Enforcement:** The question fetch endpoint must reject requests for any sequence that is not the user's current first unanswered question. This prevents both backtracking and forward-jumping at the API level.
+7.  **JWT Token Expiration:** Application JWTs issued after Google OAuth verification must include an `expiresIn` of **2 hours**. This window accommodates the expected quiz duration (~10–30 minutes) plus a buffer for browser crashes and session resumption, while preventing indefinite token validity. Expired tokens must return `401 Unauthorized` (handled by the JWT validation middleware).

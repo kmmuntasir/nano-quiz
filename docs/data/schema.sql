@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS user_sessions (
     question_id UUID NOT NULL REFERENCES questions(id) ON DELETE RESTRICT,
     sequence_order INT NOT NULL CHECK (sequence_order BETWEEN 1 AND 10),
     user_answer CHAR(1) CHECK (user_answer IS NULL OR user_answer IN ('A', 'B', 'C', 'D')),
+    viewed_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     answered_at TIMESTAMPTZ,
     UNIQUE (user_id, sequence_order),
@@ -63,3 +64,30 @@ CREATE TRIGGER set_users_updated_at
     BEFORE UPDATE ON users
     FOR EACH ROW
     EXECUTE FUNCTION trigger_set_updated_at();
+
+-- Prevent multiple quiz attempts at the database level
+CREATE OR REPLACE FUNCTION prevent_multiple_quiz_attempts()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM users
+        WHERE id = NEW.user_id AND completed_at IS NOT NULL
+    ) THEN
+        RAISE EXCEPTION 'User has already completed the quiz';
+    END IF;
+
+    IF (
+        SELECT COUNT(*) FROM user_sessions
+        WHERE user_id = NEW.user_id
+    ) >= 10 THEN
+        RAISE EXCEPTION 'User already has a quiz attempt';
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER check_single_quiz_attempt
+    BEFORE INSERT ON user_sessions
+    FOR EACH ROW
+    EXECUTE FUNCTION prevent_multiple_quiz_attempts();

@@ -8,7 +8,8 @@
 4. [Phase 3: Quiz Interface](#phase-3-quiz-interface)
 5. [Phase 4: Leaderboard](#phase-4-leaderboard)
 6. [Phase 5: Integration](#phase-5-integration)
-7. [Dependencies Matrix](#dependencies-matrix)
+7. [Phase 6: Testing](#phase-6-testing)
+8. [Dependencies Matrix](#dependencies-matrix)
 
 ---
 
@@ -41,6 +42,7 @@ This document outlines the complete task breakdown for building the OpenQuiz fro
 | 3 | 4 | Quiz wizard, question display, answer submission, completion |
 | 4 | 2 | Leaderboard view, refresh |
 | 5 | 2 | Error handling, deployment |
+| 6 | 3 | Testing |
 
 ---
 
@@ -113,9 +115,11 @@ Set up React Router with all required routes for the application.
 | `/` | Home | Public | Landing/Login page |
 | `/onboard` | Onboarding | Auth + No Employee ID | Employee ID input |
 | `/quiz` | Quiz | Auth + Has Employee ID | Quiz container |
-| `/quiz/:sequence` | Question | Auth + Quiz Started | Individual question |
 | `/quiz/complete` | Completion | Auth + Quiz Completed | Score display and leaderboard link |
+| `/quiz/:sequence` | Question | Auth + Quiz Started | Individual question |
 | `/leaderboard` | Leaderboard | Auth | Score rankings |
+
+**Important:** Define `/quiz/complete` **before** `/quiz/:sequence` in the route config. React Router matches top-to-bottom — if `:sequence` comes first, it will capture `complete` as a sequence value.
 
 ---
 
@@ -381,6 +385,7 @@ Create the completion screen shown after answering question 10. The answer endpo
 - [ ] Shows confirmation message
 - [ ] Provides link to leaderboard
 - [ ] No option to retake quiz (PRD: strictly single attempt)
+- [ ] **Score data source:** On direct navigation (e.g., page refresh), fetch score from `GET /api/quiz/status` which returns `score` and `completed_at` when the quiz is completed. On navigation from Q10 answer, prefer the answer response payload (via React Router state) for instant display, falling back to the status endpoint if state is missing.
 
 **PRD Reference:** Section 5.4
 
@@ -493,6 +498,85 @@ Configure the project for Netlify deployment.
 
 ---
 
+## Phase 6: Testing
+
+### T15: Set Up Testing Infrastructure
+
+**Description:**
+
+Configure the testing framework and infrastructure for React component and integration tests.
+
+**Dependencies:**
+
+- T1
+
+**Acceptance Criteria:**
+
+- [ ] Vitest configured with jsdom environment
+- [ ] `@testing-library/react` installed for component testing
+- [ ] `@testing-library/user-event` installed for simulating user interactions
+- [ ] Mock Service Worker (MSW) configured to mock API endpoints in tests
+- [ ] Test render helper that wraps components with required providers (Router, AuthContext, GoogleOAuthProvider)
+- [ ] `npm test` runs the full suite
+
+**Required Dependencies:**
+
+```json
+{
+  "devDependencies": {
+    "vitest": "^1.x",
+    "@testing-library/react": "^14.x",
+    "@testing-library/jest-dom": "^6.x",
+    "@testing-library/user-event": "^14.x",
+    "jsdom": "^24.x",
+    "msw": "^2.x"
+  }
+}
+```
+
+---
+
+### T16: Component Unit Tests
+
+**Description:**
+
+Write unit tests for individual React components covering rendering, user interactions, and state.
+
+**Dependencies:**
+
+- T15, T8
+
+**Acceptance Criteria:**
+
+- [ ] **LoginPage (T4):** renders Google OAuth button, triggers login flow on click
+- [ ] **OnboardingPage (T5):** validates empty employee_id input, submits valid form, shows error on API failure
+- [ ] **QuizContainer (T6):** shows "Start Quiz" button when not started, redirects to current question when in progress, shows completion message when done
+- [ ] **QuestionDisplay (T8):** renders question text and 4 options, shows progress indicator ("Question N of 10"), calls answer API on "Next"/"Submit" click
+- [ ] **CompletionScreen (T10):** displays score from answer response or status endpoint, shows leaderboard link, no retake option visible
+- [ ] **LeaderboardPage (T11):** renders ranked list, highlights current user's row, handles empty state
+
+---
+
+### T17: Integration Flow Tests
+
+**Description:**
+
+Write end-to-end integration tests covering complete user flows through the application using mocked API responses.
+
+**Dependencies:**
+
+- T15, T10
+
+**Acceptance Criteria:**
+
+- [ ] **Auth flow:** login (Google OAuth mock) → redirected to `/onboard` → submit employee_id → redirected to `/quiz`
+- [ ] **Quiz flow:** click "Start Quiz" → answer Q1 through Q9 with "Next" → answer Q10 with "Submit" → completion screen shows score
+- [ ] **Session resumption:** mid-quiz state (answered Q1–Q4) → simulate page reload → `GET /api/quiz/status` returns `current_sequence: 5` → user resumes at Q5
+- [ ] **Error handling:** 401 response clears token and redirects to `/`, 403 deadline response shows "Event has concluded" message, network error shows retry option
+- [ ] **Route protection:** unauthenticated access to `/quiz` redirects to `/`, authenticated user without `employee_id` accessing `/quiz` redirects to `/onboard`
+
+---
+
 ## Dependencies Matrix
 
 ```
@@ -508,12 +592,14 @@ T1  ─────► T2 ─────► T3
         │            │
         │            └─────────────────────────────────────────────────────────────► T14
         │
-        └──── (no further dependencies)
+        └──► T15 ──┬──► T16 (Component tests, depends on T8)
+                   └──► T17 (Integration tests, depends on T10)
 ```
 
 **Legend:**
 
 - `A ─────► B` means A must complete before B can start
+- Tasks T16–T17 also depend on completed component tasks (noted in parentheses) but those are not sequential blockers for test infrastructure setup
 
 ---
 

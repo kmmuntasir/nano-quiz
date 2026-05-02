@@ -9,7 +9,8 @@
 5. [Phase 4: Quiz API](#phase-4-quiz-api)
 6. [Phase 5: Leaderboard API](#phase-5-leaderboard-api)
 7. [Phase 6: Security](#phase-6-security)
-8. [Dependencies Matrix](#dependencies-matrix)
+8. [Phase 7: Testing](#phase-7-testing)
+9. [Dependencies Matrix](#dependencies-matrix)
 
 ---
 
@@ -35,6 +36,7 @@ This document outlines the complete task breakdown for building the OpenQuiz bac
 | 4 | 4 | Quiz flow (status, start, question, answer) |
 | 5 | 1 | Leaderboard endpoint |
 | 6 | 3 | Security middleware |
+| 7 | 4 | Testing |
 
 ---
 
@@ -113,6 +115,7 @@ Create the `.env.example` file documenting all required environment variables. C
 | JWT_SECRET | Yes | Secret for signing JWT tokens |
 | SUPABASE_DB_URL | Yes | PostgreSQL connection string |
 | EVENT_DEADLINE_ISO | Yes | ISO 8601 deadline timestamp |
+| TRACK_PER_QUESTION_TIME | No | Record per-question view timestamps (default: false) |
 
 ---
 
@@ -289,12 +292,35 @@ Implement the `/api/quiz/status` endpoint that checks the user's current quiz pr
 
 **Response Schema:**
 
+Not started:
+
+```json
+{
+  "started": false,
+  "completed": false
+}
+```
+
+In progress:
+
 ```json
 {
   "started": true,
   "completed": false,
   "current_sequence": 3,
   "started_at": "2024-01-15T10:00:00Z"
+}
+```
+
+Completed:
+
+```json
+{
+  "started": true,
+  "completed": true,
+  "score": 8,
+  "started_at": "2024-01-15T10:00:00Z",
+  "completed_at": "2024-01-15T10:05:32Z"
 }
 ```
 
@@ -308,7 +334,7 @@ FROM user_sessions
 WHERE user_id = $1 AND user_answer IS NULL;
 ```
 
-- If the result is `NULL` (all 10 answered), the quiz is completed. Set `completed: true` and also update `users.completed_at` as a safety net (normally set by the answer endpoint on Q10). If `users.score IS NULL`, also recalculate the score using the same join query as T10.
+- If the result is `NULL` (all 10 answered), the quiz is completed. Set `completed: true` and also update `users.completed_at` as a safety net (normally set by the answer endpoint on Q10). If `users.score IS NULL`, also recalculate the score using the same join query as T10. Return `score`, `started_at`, and `completed_at` in the response so the frontend completion screen can display results on page refresh.
 - If the user has no rows in `user_sessions`, return `started: false`.
 - If the user has a `started_at` but `current_sequence` is not NULL, return the sequence number for resumption.
 
@@ -382,7 +408,28 @@ Implement the `/api/quiz/question/:sequence` endpoint that retrieves a specific 
 - [ ] Parameter `sequence` is between 1-10
 - [ ] **Response MUST NOT contain `correct_opt` field**
 - [ ] Returns 404 if sequence invalid or not found
-- [ ] **Enforces no-backtracking:** rejects with `403 Forbidden` if the requested sequence has already been answered (`user_answer IS NOT NULL`) — per PRD Section 5.3, "previous questions cannot be revisited or altered"
+- [ ] **Enforces sequential access:** rejects with `403 Forbidden` if the requested sequence is not the user's current first unanswered question. Find current position via `MIN(sequence_order) WHERE user_answer IS NULL`. This prevents both backtracking to answered questions and jumping ahead to future ones.
+- [ ] **Per-question timing:** if `TRACK_PER_QUESTION_TIME` env is `true`, sets `viewed_at = NOW()` on first fetch (only when `viewed_at IS NULL`)
+
+**Implementation Notes:**
+
+Sequential access check:
+
+```sql
+-- Find the user's current position (first unanswered question)
+SELECT MIN(sequence_order) AS current_seq
+FROM user_sessions
+WHERE user_id = $1 AND user_answer IS NULL;
+-- If requested :sequence != current_seq → 403 Forbidden
+```
+
+Per-question timing (gated by `TRACK_PER_QUESTION_TIME`):
+
+```sql
+UPDATE user_sessions
+SET viewed_at = NOW()
+WHERE user_id = $1 AND sequence_order = $2 AND viewed_at IS NULL;
+```
 
 **Response Schema:**
 
@@ -536,6 +583,132 @@ Create middleware that rejects requests after the event deadline.
 
 ---
 
+## Phase 7: Testing
+
+### T15: Set Up Testing Infrastructure
+
+**Description:**
+
+Configure the testing framework and infrastructure for backend API integration tests.
+
+**Dependencies:**
+
+- T1
+
+**Acceptance Criteria:**
+
+- [ ] Vitest configured as test runner
+- [ ] supertest installed for HTTP assertions against Express app
+- [ ] Test environment uses a separate test database or transaction-based cleanup
+- [ ] Test helper utilities for creating authenticated requests (valid JWT generation)
+- [ ] `npm test` runs the full suite
+- [ ] Each test starts with a clean database state
+
+**Required Dependencies:**
+
+```json
+{
+  "devDependencies": {
+    "vitest": "^1.x",
+    "supertest": "^6.x",
+    "@types/supertest": "^6.x"
+  }
+}
+```
+
+---
+
+### T16: Auth API Integration Tests
+
+**Description:**
+
+Write integration tests covering the authentication and onboarding endpoints.
+
+**Dependencies:**
+
+- T15, T6
+
+**Acceptance Criteria:**
+
+- [ ] `POST /api/auth/google`
+    - [ ] New user: creates user record, returns JWT + `onboarding_required: true`
+    - [ ] Existing user: returns JWT + correct onboarding status
+    - [ ] Domain restriction: rejects when `RESTRICT_DOMAIN` is set and email domain doesn't match
+    - [ ] Invalid Google token: returns 401
+    - [ ] JWT has `expiresIn` of 2 hours
+- [ ] `POST /api/auth/onboard`
+    - [ ] Success: saves `employee_id`, returns confirmation
+    - [ ] Duplicate `employee_id`: returns 409 Conflict
+    - [ ] Already onboarded (user has `employee_id`): returns 409 Conflict
+    - [ ] Empty `employee_id`: returns 400 Bad Request
+
+---
+
+### T17: Quiz API Integration Tests
+
+**Description:**
+
+Write integration tests covering the full quiz lifecycle — start, fetch questions, submit answers, and completion.
+
+**Dependencies:**
+
+- T15, T10
+
+**Acceptance Criteria:**
+
+- [ ] `GET /api/quiz/status`
+    - [ ] Not started: returns `{ started: false }`
+    - [ ] In progress: returns `current_sequence`
+    - [ ] Completed: returns `score`, `started_at`, `completed_at`
+- [ ] `POST /api/quiz/start`
+    - [ ] Success: creates exactly 10 session rows (6 faq, 4 trivia), returns 200
+    - [ ] Already started: returns existing session data (idempotent), does not reset timer
+    - [ ] Not onboarded: returns 403 Forbidden
+    - [ ] Insufficient questions in DB: returns 503 Service Unavailable
+- [ ] `GET /api/quiz/question/:sequence`
+    - [ ] Success: returns question without `correct_opt`
+    - [ ] Backtracking (answered sequence): returns 403 Forbidden
+    - [ ] Forward-jumping (unanswered sequence ahead of current): returns 403 Forbidden
+    - [ ] Out-of-range sequence: returns 404
+- [ ] `POST /api/quiz/answer`
+    - [ ] Success: saves answer, returns confirmation
+    - [ ] Duplicate answer for same sequence: returns 409 Conflict
+    - [ ] Out-of-order (prior sequence unanswered): returns 409 Conflict
+    - [ ] Q10 completion: logs `completed_at`, calculates score, returns `{ completed: true, score: N }`
+
+---
+
+### T18: Security & Leaderboard Integration Tests
+
+**Description:**
+
+Write integration tests for security middleware and the leaderboard endpoint.
+
+**Dependencies:**
+
+- T15, T14
+
+**Acceptance Criteria:**
+
+- [ ] JWT middleware
+    - [ ] Missing token: returns 401
+    - [ ] Invalid token: returns 401
+    - [ ] Expired token: returns 401
+    - [ ] Valid token: allows request through
+- [ ] Deadline middleware
+    - [ ] Before deadline: allows request
+    - [ ] After deadline: returns 403 with "The event has concluded."
+- [ ] CORS
+    - [ ] Request from `FRONTEND_URL`: succeeds
+    - [ ] Request from different origin: rejected
+- [ ] `GET /api/leaderboard`
+    - [ ] Sorted by `score` DESC
+    - [ ] Ties broken by `(completed_at - started_at)` ASC
+    - [ ] Empty leaderboard: returns empty array
+    - [ ] Excludes users who haven't completed the quiz
+
+---
+
 ## Dependencies Matrix
 
 ```
@@ -549,9 +722,14 @@ T1 ──► T2 ──┬──► T3 ──┬──► T4
             │
             ├──► T12 (CORS)
             │
-            └──► T14 (Deadline Check)
+            ├──► T14 (Deadline Check)
+            │
+            └──► T15 ──┬──► T16 (Auth tests, depends on T6)
+                       ├──► T17 (Quiz tests, depends on T10)
+                       └──► T18 (Security tests, depends on T14)
 ```
 
 **Legend:**
 
 - `A ─────► B` means A must complete before B can start
+- Tasks T16–T18 also depend on completed API tasks (noted in parentheses) but those are not sequential blockers for test infrastructure setup
