@@ -32,7 +32,7 @@ interface AuthState {
     hasOnboarded: boolean
     quizStatus: QuizStatus | null
     loading: boolean
-    login: (googleToken: string) => Promise<void>
+    login: (googleToken: string) => Promise<boolean>
     logout: () => void
     setOnboarded: (employeeId: string) => void
     refreshQuizStatus: () => Promise<QuizStatus | null>
@@ -79,19 +79,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             })
     }, [token])
 
-    const login = useCallback(async (googleToken: string) => {
+    const login = useCallback(async (googleToken: string): Promise<boolean> => {
         const res = await api.post<{
             token: string
             user: User
             onboarding_required: boolean
         }>('/auth/google', { token: googleToken })
 
-        const { token: appToken, user: userData } = res.data
+        const { token: appToken, user: userData, onboarding_required } = res.data
 
         localStorage.setItem(STORAGE_KEYS.token, appToken)
         localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(userData))
         setToken(appToken)
         setUser(userData)
+
+        return onboarding_required
     }, [])
 
     const logout = useCallback(() => {
