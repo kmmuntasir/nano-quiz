@@ -42,10 +42,16 @@ router.post('/api/auth/google', async (req: Request, res: Response) => {
         }
 
         // Verify Google JWT
-        const ticket = await client.verifyIdToken({
-            idToken: token,
-            audience: process.env.GOOGLE_CLIENT_ID,
-        })
+        let ticket
+        try {
+            ticket = await client.verifyIdToken({
+                idToken: token,
+                audience: process.env.GOOGLE_CLIENT_ID,
+            })
+        } catch {
+            res.status(401).json({ error: 'Invalid Google token' })
+            return
+        }
         const payload = ticket.getPayload()
 
         if (!payload?.sub || !payload?.email || !payload?.name) {

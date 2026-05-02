@@ -1,6 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import jwt from 'jsonwebtoken'
 import { generateTestToken, authenticatedRequest, supertest, TEST_JWT_SECRET } from '../test/helpers.js'
 import app from '../index.js'
+
+const { mockVerifyIdToken } = vi.hoisted(() => ({
+    mockVerifyIdToken: vi.fn(),
+}))
 
 vi.mock('../db/index.js', () => ({
     query: vi.fn(),
@@ -9,13 +14,171 @@ vi.mock('../db/index.js', () => ({
 
 vi.mock('google-auth-library', () => ({
     OAuth2Client: vi.fn().mockImplementation(() => ({
-        verifyIdToken: vi.fn(),
+        verifyIdToken: mockVerifyIdToken,
     })),
 }))
 
 import { query } from '../db/index.js'
 
 const mockQuery = vi.mocked(query)
+
+describe('POST /api/auth/google', () => {
+    const googlePayload = {
+        sub: 'google-123',
+        email: 'user@example.com',
+        name: 'Test User',
+    }
+
+    beforeEach(() => {
+        vi.clearAllMocks()
+        process.env.JWT_SECRET = TEST_JWT_SECRET
+        process.env.GOOGLE_CLIENT_ID = 'test-google-client-id'
+    })
+
+    afterEach(() => {
+        delete process.env.RESTRICT_DOMAIN
+    })
+
+    it('creates new user and returns JWT + onboarding_required: true', async () => {
+        mockVerifyIdToken.mockResolvedValue({
+            getPayload: () => ({ ...googlePayload }),
+        })
+
+        const newUser = {
+            id: '00000000-0000-0000-0000-000000000099',
+            email: 'user@example.com',
+            name: 'Test User',
+            employee_id: null,
+        }
+        mockQuery.mockResolvedValueOnce({ rows: [newUser], rowCount: 1 } as any)
+
+        const res = await supertest(app)
+            .post('/api/auth/google')
+            .send({ token: 'valid-google-token' })
+
+        expect(res.status).toBe(200)
+        expect(res.body.token).toBeDefined()
+        expect(res.body.user).toEqual({
+            id: newUser.id,
+            email: 'user@example.com',
+            name: 'Test User',
+            employee_id: null,
+        })
+        expect(res.body.onboarding_required).toBe(true)
+
+        const decoded = jwt.verify(res.body.token, TEST_JWT_SECRET) as any
+        expect(decoded.userId).toBe(newUser.id)
+    })
+
+    it('returns JWT + onboarding_required: false for existing user with employee_id', async () => {
+        mockVerifyIdToken.mockResolvedValue({
+            getPayload: () => ({ ...googlePayload }),
+        })
+
+        const existingUser = {
+            id: '00000000-0000-0000-0000-000000000099',
+            email: 'user@example.com',
+            name: 'Test User',
+            employee_id: 'EMP001',
+        }
+        mockQuery.mockResolvedValueOnce({ rows: [existingUser], rowCount: 1 } as any)
+
+        const res = await supertest(app)
+            .post('/api/auth/google')
+            .send({ token: 'valid-google-token' })
+
+        expect(res.status).toBe(200)
+        expect(res.body.onboarding_required).toBe(false)
+        expect(res.body.user.employee_id).toBe('EMP001')
+    })
+
+    it('rejects when RESTRICT_DOMAIN is set and email domain does not match', async () => {
+        process.env.RESTRICT_DOMAIN = 'company.com'
+
+        mockVerifyIdToken.mockResolvedValue({
+            getPayload: () => ({
+                ...googlePayload,
+                email: 'user@other.com',
+            }),
+        })
+
+        const res = await supertest(app)
+            .post('/api/auth/google')
+            .send({ token: 'valid-google-token' })
+
+        expect(res.status).toBe(403)
+        expect(res.body.error).toMatch(/company\.com/)
+    })
+
+    it('returns 401 when Google token verification throws', async () => {
+        mockVerifyIdToken.mockRejectedValue(new Error('Token verification failed'))
+
+        const res = await supertest(app)
+            .post('/api/auth/google')
+            .send({ token: 'bad-token' })
+
+        expect(res.status).toBe(401)
+        expect(res.body.error).toMatch(/invalid/i)
+    })
+
+    it('returns 401 when payload is incomplete', async () => {
+        mockVerifyIdToken.mockResolvedValue({
+            getPayload: () => ({ sub: 'google-123' }),
+        })
+
+        const res = await supertest(app)
+            .post('/api/auth/google')
+            .send({ token: 'incomplete-token' })
+
+        expect(res.status).toBe(401)
+    })
+
+    it('issues JWT with 2-hour expiry', async () => {
+        mockVerifyIdToken.mockResolvedValue({
+            getPayload: () => ({ ...googlePayload }),
+        })
+
+        mockQuery.mockResolvedValueOnce({
+            rows: [{ id: 'user-1', email: 'user@example.com', name: 'Test User', employee_id: null }],
+            rowCount: 1,
+        } as any)
+
+        const res = await supertest(app)
+            .post('/api/auth/google')
+            .send({ token: 'valid-google-token' })
+
+        const decoded = jwt.verify(res.body.token, TEST_JWT_SECRET) as any
+        expect(decoded.exp - decoded.iat).toBe(7200)
+    })
+
+    it('returns 400 when token is missing', async () => {
+        const res = await supertest(app)
+            .post('/api/auth/google')
+            .send({})
+
+        expect(res.status).toBe(400)
+        expect(res.body.error).toMatch(/required/i)
+    })
+
+    it('allows request when RESTRICT_DOMAIN matches email domain', async () => {
+        process.env.RESTRICT_DOMAIN = 'example.com'
+
+        mockVerifyIdToken.mockResolvedValue({
+            getPayload: () => ({ ...googlePayload }),
+        })
+
+        mockQuery.mockResolvedValueOnce({
+            rows: [{ id: 'user-1', email: 'user@example.com', name: 'Test User', employee_id: null }],
+            rowCount: 1,
+        } as any)
+
+        const res = await supertest(app)
+            .post('/api/auth/google')
+            .send({ token: 'valid-google-token' })
+
+        expect(res.status).toBe(200)
+    })
+})
 
 describe('POST /api/auth/onboard', () => {
     const userId = '00000000-0000-0000-0000-000000000001'
@@ -62,9 +225,7 @@ describe('POST /api/auth/onboard', () => {
     })
 
     it('returns 409 if user already has employee_id set', async () => {
-        // Uniqueness check passes (no other user has it)
         mockQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any)
-        // Update returns 0 rows (user already has employee_id)
         mockQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any)
 
         const res = await authenticatedRequest('post', '/api/auth/onboard')
@@ -82,9 +243,7 @@ describe('POST /api/auth/onboard', () => {
             employee_id: 'EMP123',
         }
 
-        // Uniqueness check passes
         mockQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any)
-        // Update succeeds
         mockQuery.mockResolvedValueOnce({ rows: [user], rowCount: 1 } as any)
 
         const res = await authenticatedRequest('post', '/api/auth/onboard')
@@ -109,7 +268,6 @@ describe('POST /api/auth/onboard', () => {
         await authenticatedRequest('post', '/api/auth/onboard')
             .send({ employee_id: '  EMP123  ' })
 
-        // Second call is the UPDATE — check trimmed value was passed
         expect(mockQuery).toHaveBeenNthCalledWith(2,
             expect.stringContaining('UPDATE users'),
             ['EMP123', userId],
