@@ -4,6 +4,7 @@ import morgan from 'morgan'
 import healthRouter from './routes/health.js'
 import { closePool } from './db/index.js'
 import authRouter from './routes/auth.js'
+import quizRouter from './routes/quiz.js'
 import { corsHandler, preflightHandler } from './middleware/cors.js'
 
 const app = express()
@@ -16,6 +17,7 @@ app.use(express.json())
 
 app.use(healthRouter)
 app.use(authRouter)
+app.use(quizRouter)
 
 const server = app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`)
