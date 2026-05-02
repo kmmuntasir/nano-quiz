@@ -74,6 +74,7 @@ Initialize the backend project with Express.js and TypeScript. Set up the projec
     "morgan": "^1.x"
   },
   "devDependencies": {
+    "@types/node": "^20.x",
     "@types/express": "^4.x",
     "@types/cors": "^2.x",
     "@types/pg": "^8.x",
@@ -230,7 +231,7 @@ Implement the `/api/auth/google` endpoint that verifies the Google JWT token, cr
 - [ ] Creates new user if not exists (extracts google_id, email, name)
 - [ ] Returns JWT, user object, onboarding status
 - [ ] Validates domain if `RESTRICT_DOMAIN` is set
-- [ ] Issues JWT with `expiresIn: '2h'` (per PRD Section 9.5 — accommodates quiz duration plus crash/resume buffer)
+- [ ] Issues JWT with `expiresIn: '2h'` (per PRD Section 9, item 7 — accommodates quiz duration plus crash/resume buffer)
 
 **Response Schema:**
 

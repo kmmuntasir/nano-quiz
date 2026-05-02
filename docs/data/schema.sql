@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS user_sessions (
 CREATE INDEX IF NOT EXISTS idx_questions_category ON questions(category);
 CREATE INDEX IF NOT EXISTS idx_user_sessions_user_seq ON user_sessions(user_id, sequence_order);
 CREATE INDEX IF NOT EXISTS idx_user_sessions_question_id ON user_sessions(question_id);
-CREATE INDEX IF NOT EXISTS idx_users_started_not_completed ON users(created_at) WHERE started_at IS NOT NULL AND completed_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_users_started_not_completed ON users(started_at) WHERE started_at IS NOT NULL AND completed_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_users_leaderboard ON users(score DESC) WHERE completed_at IS NOT NULL;
 
 -- Auto-update updated_at on users row changes
@@ -98,7 +98,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER check_single_quiz_attempt
+CREATE TRIGGER prevent_multiple_quiz_attempts
     BEFORE INSERT ON user_sessions
     FOR EACH ROW
     EXECUTE FUNCTION prevent_multiple_quiz_attempts();

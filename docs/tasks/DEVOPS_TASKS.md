@@ -215,6 +215,9 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
 
       - name: Install backend dependencies
         run: |
@@ -227,6 +230,9 @@ jobs:
       - name: Backend type check
         run: cd backend && npm run typecheck
 
+      - name: Backend tests
+        run: cd backend && npm test
+
       - name: Install frontend dependencies
         run: |
           cd frontend
@@ -237,6 +243,9 @@ jobs:
 
       - name: Frontend type check
         run: cd frontend && npm run typecheck
+
+      - name: Frontend tests
+        run: cd frontend && npm test
 
       - name: Frontend build
         run: cd frontend && npm run build
@@ -365,11 +374,11 @@ VITE_GOOGLE_CLIENT_ID=your_google_client_id.apps.googleusercontent.com
 
 **Description:**
 
-Verify that Backend CORS is properly configured to accept only the Netlify frontend URL. **Note:** The actual CORS middleware implementation is handled in Backend T13 (Security phase). This task verifies the deployment configuration is correct.
+Verify that Backend CORS is properly configured to accept only the Netlify frontend URL. **Note:** The actual CORS middleware implementation is handled in Backend T12 (Security phase). This task verifies the deployment configuration is correct.
 
 **Dependencies:**
 
-- T8, Backend T13
+- T8, Backend T12
 
 **Acceptance Criteria:**
 
@@ -490,15 +499,15 @@ app.use(morgan('combined'));
 ## Dependencies Matrix
 
 ```
-T1  ─────► T2 ─────► T3
-        │            │
-        │            ├────────► T6 ─────► T7
-        │            │
-        └────────────┼─────────────────────► T4 ─────► T5 ─────► T8 ─────► T10 ─────► T12 ─────► T13
-                     │                                              │
-                     │                                              ├────────► T9 ─────► T11
-                     │                                              │
-                     └──────────────────────────────────────────────┘
+T1 ──┬──► T2 ─────► T6 ──► T7
+     │
+     └──► T3
+
+T4 ──► T5 ──┬──► T8 ──┬──► T9
+             │         ├──► T10 (also requires Backend T12)
+             │         ├──► T12
+             │         └──► T13
+             └──► T11
 ```
 
 **Legend:**
