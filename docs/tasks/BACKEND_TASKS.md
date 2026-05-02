@@ -295,6 +295,20 @@ Implement the `/api/quiz/status` endpoint that checks the user's current quiz pr
 }
 ```
 
+**Implementation Notes:**
+
+Determine `current_sequence` by finding the first unanswered question:
+
+```sql
+SELECT MIN(sequence_order) AS current_sequence
+FROM user_sessions
+WHERE user_id = $1 AND user_answer IS NULL;
+```
+
+- If the result is `NULL` (all 10 answered), the quiz is completed. Set `completed: true` and also update `users.completed_at` as a safety net (normally set by the answer endpoint on Q10).
+- If the user has no rows in `user_sessions`, return `started: false`.
+- If the user has a `started_at` but `current_sequence` is not NULL, return the sequence number for resumption.
+
 ---
 
 ### T8: Implement Start Quiz Endpoint
@@ -314,6 +328,7 @@ Implement the `/api/quiz/start` endpoint that allocates 10 random questions and 
 - [ ] Selects 4 random questions where `category='trivia'`
 - [ ] Writes to `user_sessions` with randomized `sequence_order` (1-10)
 - [ ] Records `started_at` using PostgreSQL `NOW()`
+- [ ] Validates that at least 6 `faq` and 4 `trivia` questions exist in the database; returns `503 Service Unavailable` with a descriptive message if not
 - [ ] Idempotent: aborts if user already has `started_at`, returns existing session data without resetting the timer
 
 **Database Transaction:**
@@ -508,22 +523,17 @@ Create middleware that rejects requests after the event deadline.
 ## Dependencies Matrix
 
 ```
-T1  ─────┬──► T2 ─────┬──► T3 ─────┬──► T4
-        │            │            │
-        │            │            └────────► T5
-        │            │                        │
-        │            │                        ├────────► T6
-        │            │                        │
-        │            └──────────────────────┼────────► T7
-        │                                     │         │
-        │                                     │         └────────► T8 ─────► T9 ─────► T10 ─────► T11
-        │                                     │
-        │                                     └──────────────────────────────────────────────────► T12
-        │
-        └──────────────────────────────────────┘
-                                                │
-                                                ├────────► T13
-                                                └────────► T14
+T1 ──► T2 ──┬──► T3 ──┬──► T4
+            │         │
+            │         └──► T5 ──┬──► T6
+            │                  │
+            │                  ├──► T7 ──► T8 ──► T9 ──► T10 ──► T11
+            │                  │
+            │                  └──► T13 (JWT Middleware)
+            │
+            ├──► T12 (CORS)
+            │
+            └──► T14 (Deadline Check)
 ```
 
 **Legend:**

@@ -60,6 +60,7 @@ Configure the local development environment for running both frontend and backen
 - [ ] Frontend runs with `npm run dev` (port 5173)
 - [ ] Frontend can communicate with Backend
 - [ ] Environment variables documented in `.env.example`
+- [ ] Root `.gitignore` exists and excludes `node_modules/`, `dist/`, `.env`, `.env.local`, and OS files (`.DS_Store`, `Thumbs.db`)
 
 **Implementation:**
 
@@ -267,7 +268,7 @@ Add validation checks before deployment.
 
 **Description:**
 
-Configure Render for backend deployment with automaticdeploys from git.
+Configure Render for backend deployment with automatic deploys from git.
 
 **Dependencies:**
 
@@ -286,9 +287,15 @@ Configure Render for backend deployment with automaticdeploys from git.
 | Setting | Value |
 |---------|-------|
 | Environment | Node |
-| Build Command | npm install |
-| Start Command | npm start |
+| Build Command | `npm install && npm run build` |
+| Start Command | `npm start` |
 | Instance Type | Free (testing) / Standard (production) |
+
+**Note:** The backend uses TypeScript. The build command must compile TS to JS (`tsc` or `tsx` bundle) before `npm start` runs the compiled output. Ensure `package.json` has:
+- `"build": "tsc"` (or equivalent bundler command)
+- `"start": "node dist/index.js"` (pointing to compiled output, NOT `tsx`)
+
+Using `tsx` in production is possible but not recommended — it adds startup overhead and hides type errors that the build step would catch.
 
 **Environment Variables (Render):**
 
