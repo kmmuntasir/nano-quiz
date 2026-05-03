@@ -159,6 +159,8 @@ Create and configure the Supabase PostgreSQL database.
 
 ### T5: Run Database Schema
 
+> **Status: DEFERRED** — Supabase credentials not yet available. Will be performed once `SUPABASE_DB_URL` is provided. Blocked on T4 completion (credentials handoff).
+
 **Description:**
 
 Apply the database schema to Supabase using the SQL file.
