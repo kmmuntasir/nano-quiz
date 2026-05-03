@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  workflow_dispatch: # disabled until ready to enable CI
+  # push:
+  #   branches: [main]
+  # pull_request:
+  #   branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      - name: Install backend dependencies
+        run: |
+          cd backend
+          npm ci
+
+      - name: Backend lint
+        run: cd backend && npm run lint
+
+      - name: Backend type check
+        run: cd backend && npm run typecheck
+
+      - name: Backend tests
+        run: cd backend && npm test
+
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Frontend lint
+        run: cd frontend && npm run lint
+
+      - name: Frontend type check
+        run: cd frontend && npm run typecheck
+
+      - name: Frontend tests
+        run: cd frontend && npm test
+
+      - name: Frontend build
+        run: cd frontend && npm run build
