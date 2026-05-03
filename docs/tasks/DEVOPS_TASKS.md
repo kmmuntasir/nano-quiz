@@ -100,6 +100,17 @@ Set up Git hooks for code quality checks before commits.
 - ESLint for JavaScript/TypeScript linting
 - TypeScript compiler (`tsc --noEmit`) for type checking
 
+**Implementation Notes:**
+
+- Pre-commit hook runs `tsc` type checking for both frontend and backend, plus `lint-staged` (eslint --fix) on staged files.
+- Frontend `tsc` is currently non-blocking (23 pre-existing type errors in test files and source). These errors must be resolved before making the frontend typecheck blocking. Key issues:
+  - Unexported types (`AuthState`, `QuizStatus`) from `AuthContext`
+  - Missing vitest globals (`beforeAll`, `afterAll`, `afterEach`) in test setup
+  - `no-explicit-any` violations in test files
+  - Type mismatch in `Login.tsx` (`text` prop on Google Login button)
+- Backend `tsc --noEmit` passes cleanly and is fully blocking.
+- To make frontend typecheck blocking, remove `|| true` from the frontend tsc line in `.husky/pre-commit`.
+
 ---
 
 ### T3: Create Development Guide

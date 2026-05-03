@@ -1,0 +1,3 @@
+(cd frontend && npx tsc -b) || true
+(cd backend && npx tsc --noEmit)
+npx lint-staged

@@ -20,3 +20,6 @@ Thumbs.db
 docs/ai_generated/*
 !docs/ai_generated/
 !docs/ai_generated/.gitkeep
+
+# Husky artifacts in sub-packages (root manages hooks)
+backend/.husky/
