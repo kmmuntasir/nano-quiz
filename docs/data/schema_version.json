@@ -1,0 +1,11 @@
+{
+    "version": 1,
+    "description": "Initial schema: users, questions, user_sessions",
+    "tables": ["users", "questions", "user_sessions", "schema_migrations"],
+    "checksums": {
+        "users": ["id", "google_id", "email", "name", "employee_id", "created_at", "started_at", "completed_at", "score", "duration_seconds", "updated_at"],
+        "questions": ["id", "category", "question_text", "opt_a", "opt_b", "opt_c", "opt_d", "correct_opt"],
+        "user_sessions": ["id", "user_id", "question_id", "sequence_order", "user_answer", "viewed_at", "created_at", "answered_at"],
+        "schema_migrations": ["version", "applied_at", "description"]
+    }
+}

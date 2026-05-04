@@ -1,8 +1,21 @@
 -- OpenQuiz Database Schema
 -- Product Requirements Document v1.0.0
+-- Schema Version: 1
 
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- Schema migration tracking
+CREATE TABLE IF NOT EXISTS schema_migrations (
+    version INT PRIMARY KEY,
+    applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    description VARCHAR(255)
+);
+
+-- Seed initial version record
+INSERT INTO schema_migrations (version, description)
+VALUES (1, 'Initial schema: users, questions, user_sessions')
+ON CONFLICT (version) DO NOTHING;
 
 -- Table: users
 CREATE TABLE IF NOT EXISTS users (

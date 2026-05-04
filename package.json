@@ -4,7 +4,10 @@
   "scripts": {
     "prepare": "husky",
     "lint": "npm run lint --workspaces",
-    "test": "npm run test --workspaces"
+    "test": "npm run test --workspaces",
+    "validate:env": "tsx scripts/validate-env.ts",
+    "validate:schema": "tsx scripts/validate-schema.ts",
+    "validate:deploy": "tsx scripts/pre-deploy.ts"
   },
   "lint-staged": {
     "frontend/**/*.{ts,tsx}": [

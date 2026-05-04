@@ -53,3 +53,39 @@ jobs:
 
       - name: Frontend build
         run: cd frontend && npm run build
+
+  validate-deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      - name: Install all dependencies
+        run: |
+          cd backend && npm ci
+          cd ../frontend && npm ci
+
+      - name: Validate environment variables
+        run: npx tsx scripts/validate-env.ts
+
+      - name: Validate builds
+        run: |
+          cd backend && npm run build
+          cd ../frontend && npm run build
+
+      - name: Validate database schema
+        if: env.SUPABASE_DB_URL != ''
+        run: npx tsx scripts/validate-schema.ts
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
