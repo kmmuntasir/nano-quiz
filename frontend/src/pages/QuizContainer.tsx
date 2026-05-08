@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import StartQuizButton from '../components/StartQuizButton'
@@ -16,6 +16,19 @@ export default function QuizContainer() {
             navigate(`/quiz/${quizStatus.current_sequence}`, { replace: true })
         }
     }, [quizStatus, navigate])
+
+    // When quizStatus transitions to completed (e.g. after Q10 answer),
+    // navigate to the completion screen. Without this, ProtectedRoute
+    // redirects /quiz/complete back to /quiz because context is stale,
+    // then the effect above sends us to a question page that 403s.
+    const prevCompletedRef = useRef(quizStatus?.completed)
+    useEffect(() => {
+        const wasCompleted = prevCompletedRef.current
+        prevCompletedRef.current = quizStatus?.completed
+        if (!wasCompleted && quizStatus?.completed) {
+            navigate('/quiz/complete', { replace: true })
+        }
+    }, [quizStatus?.completed, navigate])
 
     if (loading) {
         return (

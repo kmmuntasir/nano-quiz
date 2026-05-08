@@ -9,6 +9,7 @@
     "start": "node dist/index.js",
     "test": "vitest run",
     "seed": "tsx src/seed.ts",
+    "cleanup-db": "tsx scripts/cleanup-db.ts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit"
   },

@@ -2,11 +2,13 @@ import { useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import QuestionDisplay from '../components/QuestionDisplay'
 import type { AnswerResult } from '../components/QuestionDisplay'
+import { useAuth } from '../hooks/useAuth'
 
 export default function Question() {
     const { sequence: sequenceParam } = useParams<{ sequence: string }>()
     const navigate = useNavigate()
     const sequence = Number(sequenceParam)
+    const { refreshQuizStatus } = useAuth()
 
     const handleAnswer = useCallback(
         (_sequence: number, _selectedOption: string, result?: AnswerResult) => {
@@ -31,9 +33,15 @@ export default function Question() {
 
     const handleSequenceMismatch = useCallback(
         (attempted: number) => {
-            navigate(`/quiz/${attempted}`, { replace: true })
+            refreshQuizStatus().then((status) => {
+                if (status?.completed) {
+                    navigate('/quiz/complete', { replace: true })
+                } else {
+                    navigate(`/quiz/${attempted}`, { replace: true })
+                }
+            })
         },
-        [navigate],
+        [navigate, refreshQuizStatus],
     )
 
     if (!sequenceParam || Number.isNaN(sequence) || sequence < 1 || sequence > 10) {
