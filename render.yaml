@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: nano-quiz-backend
+    env: node
+    rootDir: backend
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: "3000"
+      - key: FRONTEND_URL
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: SUPABASE_DB_URL
+        sync: false
+      - key: RESTRICT_DOMAIN
+        sync: false
+      - key: EVENT_DEADLINE_ISO
+        sync: false
+      - key: TRACK_PER_QUESTION_TIME
+        sync: false
