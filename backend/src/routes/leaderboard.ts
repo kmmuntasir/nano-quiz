@@ -1,5 +1,6 @@
 import { Router, type Request, type Response } from 'express'
 import { query } from '../db/index.js'
+import { logger } from '../utils/logger.js'
 
 const router = Router()
 
@@ -23,7 +24,7 @@ router.get('/api/leaderboard', async (_req: Request, res: Response) => {
 
         res.json(leaderboard)
     } catch (err) {
-        console.error('Leaderboard error:', err)
+        logger.error('Leaderboard error', { error: String(err) })
         res.status(500).json({ error: 'Failed to fetch leaderboard' })
     }
 })

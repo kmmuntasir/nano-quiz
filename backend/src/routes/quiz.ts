@@ -1,6 +1,7 @@
 import { Router, type Response } from 'express'
 import { query, getClient } from '../db/index.js'
 import { authenticate, type AuthenticatedRequest } from '../middleware/auth.js'
+import { logger } from '../utils/logger.js'
 
 const router = Router()
 
@@ -89,7 +90,7 @@ router.get('/api/quiz/status', authenticate, async (req: AuthenticatedRequest, r
             completed_at: completedAt,
         })
     } catch (err) {
-        console.error('Quiz status error:', err)
+        logger.error('Quiz status error', { error: String(err) })
         res.status(500).json({ error: 'Failed to fetch quiz status' })
     }
 })
@@ -209,7 +210,7 @@ router.post('/api/quiz/start', authenticate, async (req: AuthenticatedRequest, r
             client.release()
         }
     } catch (err) {
-        console.error('Quiz start error:', err)
+        logger.error('Quiz start error', { error: String(err) })
         res.status(500).json({ error: 'Failed to start quiz' })
     }
 })
@@ -284,7 +285,7 @@ router.get('/api/quiz/question/:sequence', authenticate, async (req: Authenticat
             },
         })
     } catch (err) {
-        console.error('Get question error:', err)
+        logger.error('Get question error', { error: String(err) })
         res.status(500).json({ error: 'Failed to fetch question' })
     }
 })
@@ -389,7 +390,7 @@ router.post('/api/quiz/answer', authenticate, async (req: AuthenticatedRequest, 
 
         res.json({ success: true })
     } catch (err) {
-        console.error('Submit answer error:', err)
+        logger.error('Submit answer error', { error: String(err) })
         res.status(500).json({ error: 'Failed to submit answer' })
     }
 })

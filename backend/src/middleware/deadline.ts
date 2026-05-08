@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express'
+import { logger } from '../utils/logger.js'
 
 export function deadlineCheck(req: Request, res: Response, next: NextFunction): void {
     const deadline = process.env.EVENT_DEADLINE_ISO
@@ -8,7 +9,7 @@ export function deadlineCheck(req: Request, res: Response, next: NextFunction): 
 
     const deadlineTime = new Date(deadline).getTime()
     if (isNaN(deadlineTime)) {
-        console.error(`Invalid EVENT_DEADLINE_ISO: ${deadline}`)
+        logger.error('Invalid EVENT_DEADLINE_ISO', { value: deadline })
         return next()
     }
 

@@ -1,4 +1,5 @@
 import { Pool, type QueryResult, type QueryResultRow } from 'pg'
+import { logger } from '../utils/logger.js'
 
 const pool = new Pool({
     connectionString: process.env.SUPABASE_DB_URL,
@@ -8,7 +9,7 @@ const pool = new Pool({
 })
 
 pool.on('error', (err) => {
-    console.error('Unexpected idle client error:', err.message)
+    logger.error('Unexpected idle client error', { message: err.message, stack: err.stack })
 })
 
 export async function query<T extends QueryResultRow = QueryResultRow>(

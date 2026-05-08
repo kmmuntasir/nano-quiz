@@ -2,6 +2,7 @@ import { Router, type Request, type Response } from 'express'
 import { OAuth2Client } from 'google-auth-library'
 import jwt from 'jsonwebtoken'
 import { query } from '../db/index.js'
+import { logger } from '../utils/logger.js'
 
 const router = Router()
 
@@ -100,7 +101,7 @@ router.post('/api/auth/google', async (req: Request, res: Response) => {
             onboarding_required: user.employee_id === null,
         })
     } catch (err) {
-        console.error('Google auth error:', err)
+        logger.error('Google auth error', { error: String(err) })
         res.status(500).json({ error: 'Authentication failed' })
     }
 })
@@ -149,7 +150,7 @@ router.post('/api/auth/onboard', async (req: Request, res: Response) => {
             },
         })
     } catch (err) {
-        console.error('Onboard error:', err)
+        logger.error('Onboard error', { error: String(err) })
         res.status(500).json({ error: 'Onboarding failed' })
     }
 })
