@@ -6,7 +6,7 @@ Plug-n-play quiz platform. Fork, drop in JSON questions, configure Google OAuth,
 
 | Layer | Technology | Host |
 |-------|-----------|------|
-| Frontend | React 19 + Vite + TypeScript + Tailwind CSS | Netlify |
+| Frontend | React 19 + Vite + TypeScript + Tailwind CSS | Vercel |
 | Backend | Node.js 24 + Express 5 + TypeScript | Render |
 | Database | PostgreSQL (Supabase) | Supabase |
 | Auth | Google OAuth 2.0 | — |
@@ -214,12 +214,12 @@ cd frontend && npm test
 
 ## Deployment
 
-### Frontend (Netlify)
+### Frontend (Vercel)
 
-1. Connect repo to Netlify
-2. Set **build command**: `cd frontend && npm run build`
-3. Set **publish directory**: `frontend/dist`
-4. Add environment variables in Netlify dashboard
+1. Connect repo to Vercel
+2. Set **root directory**: `frontend`
+3. Build command and output directory auto-detected from `vercel.json`
+4. Add environment variables in Vercel dashboard
 
 ### Backend (Render)
 
@@ -251,7 +251,7 @@ Key constraints:
 5. Application type: **Web application**
 6. Add authorized JavaScript origins:
    - `http://localhost:5173` (development)
-   - Your Netlify URL (production)
+   - Your Vercel URL (production)
 7. Copy the Client ID to both `backend/.env` (`GOOGLE_CLIENT_ID`) and `frontend/.env` (`VITE_GOOGLE_CLIENT_ID`)
 
 ## Contributing

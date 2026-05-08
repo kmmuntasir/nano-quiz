@@ -50,7 +50,7 @@ Source file: [`docs/tasks/DEVOPS_TASKS.md`](tasks/DEVOPS_TASKS.md)
 ### D6: Frontend Deploy + CORS + Monitoring (3 parallel tasks)
 | Task | Reference |
 |------|-----------|
-| T9: Configure Frontend Deployment (Netlify) | [`DEVOPS_TASKS.md:324`](tasks/DEVOPS_TASKS.md#L324) |
+| T9: Configure Frontend Deployment (Vercel) | [`DEVOPS_TASKS.md:324`](tasks/DEVOPS_TASKS.md#L324) |
 | T10: Verify CORS on Backend | [`DEVOPS_TASKS.md:373`](tasks/DEVOPS_TASKS.md#L373) |
 | T12: Set Up Health Checks | [`DEVOPS_TASKS.md:439`](tasks/DEVOPS_TASKS.md#L439) |
 | T13: Configure Logging | [`DEVOPS_TASKS.md:471`](tasks/DEVOPS_TASKS.md#L471) |

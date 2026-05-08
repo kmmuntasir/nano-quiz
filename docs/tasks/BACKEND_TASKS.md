@@ -110,7 +110,7 @@ Create the `.env.example` file documenting all required environment variables. C
 | Variable | Required | Description |
 |----------|----------|-------------|
 | PORT | Yes | Server port (default: 3000) |
-| FRONTEND_URL | Yes | Netlify deployed URL for CORS |
+| FRONTEND_URL | Yes | Vercel deployed URL for CORS |
 | GOOGLE_CLIENT_ID | Yes | Google OAuth client ID |
 | RESTRICT_DOMAIN | No | Domain to restrict (e.g., @exabyting.com) |
 | JWT_SECRET | Yes | Secret for signing JWT tokens |

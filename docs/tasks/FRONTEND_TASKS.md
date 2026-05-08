@@ -23,7 +23,7 @@ This document outlines the complete task breakdown for building the OpenQuiz fro
 | **Language** | TypeScript |
 | **Styling** | Tailwind CSS |
 | **Auth** | @react-oauth/google |
-| **Deployment** | Netlify |
+| **Deployment** | Vercel |
 
 ### Reference: PRD Sections
 
@@ -478,7 +478,7 @@ Implement comprehensive error handling for all API calls.
 
 **Description:**
 
-Configure the project for Netlify deployment.
+Configure the project for Vercel deployment.
 
 **Dependencies:**
 
@@ -486,10 +486,11 @@ Configure the project for Netlify deployment.
 
 **Acceptance Criteria:**
 
-- [ ] `netlify.toml` configured
+- [ ] `vercel.json` configured
 - [ ] Build command: `npm run build`
-- [ ] Publish directory: `dist`
-- [ ] Environment variables configured in Netlify dashboard
+- [ ] Output directory: `dist`
+- [ ] SPA rewrites configured (all routes → `/index.html`)
+- [ ] Environment variables configured in Vercel dashboard
 
 **PRD Reference:** Section 8.2
 

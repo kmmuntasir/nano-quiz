@@ -7,7 +7,7 @@
 | **Target Audience** | Engineering Teams, HR Departments, and Community Managers |
 | **Platform** | Web Application (Responsive Desktop/Mobile) |
 | **Architecture** | Frontend (React.js), Backend (Express.js/Node.js), Database (PostgreSQL via Supabase) |
-| **Deployment** | Netlify (Frontend), Render (Backend) |
+| **Deployment** | Vercel (Frontend), Render (Backend) |
 
 ## 1\. Executive Summary
 
@@ -23,14 +23,14 @@ OpenQuiz is a lightweight, easily deployable, and highly configurable asynchrono
 
 ### 3.1 Tech Stack
 
--   **Frontend:** React.js (Vite), Tailwind CSS for styling, deployed on **Netlify**.
+-   **Frontend:** React.js (Vite), Tailwind CSS for styling, deployed on **Vercel**.
 -   **Backend:** Node.js with Express.js REST API, deployed on **Render**.
 -   **Database:** PostgreSQL, hosted on **Supabase**.
 -   **Authentication:** Google OAuth 2.0 (handled via `@react-oauth/google` on the client and `google-auth-library` on the server).
 
 ### 3.2 Cross-Origin Resource Sharing (CORS)
 
-Since the frontend and backend are deployed on different domains (Netlify vs. Render), the Express backend must be configured with strict CORS policies, only accepting requests from the specific Netlify URL defined in the environment variables.
+Since the frontend and backend are deployed on different domains (Vercel vs. Render), the Express backend must be configured with strict CORS policies, only accepting requests from the specific Vercel URL defined in the environment variables.
 
 ## 4\. Plug-n-Play Configuration (Data Seeding)
 
@@ -69,7 +69,7 @@ The backend `package.json` will include a script (`npm run seed`). When executed
 
 ### 5.1 Authentication & Onboarding
 
--   **Login Screen:** Users visit the Netlify URL and click "Sign in with Google."
+-   **Login Screen:** Users visit the Vercel URL and click "Sign in with Google."
 -   **Domain Validation:** If the `.env` variable `RESTRICT_DOMAIN` is set, the backend rejects any Google tokens not matching the company domain (e.g., `@exabyting.com`).
 -   **Registration:** On first successful login, users are redirected to a profile completion page to input their **Employee ID** (required).
 
@@ -135,7 +135,7 @@ All endpoints under `/api/*` require a Bearer token (JWT issued by the Express b
 
 ```
 PORT=3000
-FRONTEND_URL=[https://your-app.netlify.app](https://your-app.netlify.app)
+FRONTEND_URL=[https://your-app.vercel.app](https://your-app.vercel.app)
 GOOGLE_CLIENT_ID=your_google_client_id.apps.googleusercontent.com
 RESTRICT_DOMAIN=exabyting.com # Leave blank to allow any Gmail
 JWT_SECRET=super_secret_string_for_app_sessions

@@ -67,10 +67,10 @@ VITE_GOOGLE_CLIENT_ID=your_google_client_id.apps.googleusercontent.com
 
 ### Deployment (Frontend)
 
-- Deploy on **Netlify**
-- Build command: `npm run build`
-- Publish directory: `dist`
-- Set environment variables in Netlify dashboard
+- Deploy on **Vercel**
+- Build command auto-detected from `vercel.json`
+- Output directory: `dist`
+- Set environment variables in Vercel dashboard
 
 ---
 

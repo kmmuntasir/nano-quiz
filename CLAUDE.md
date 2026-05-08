@@ -6,11 +6,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 NanoQuiz (OpenQuiz) is a plug-n-play quiz platform. Organizations fork it, drop in JSON question files, configure env vars, and deploy a secure, timed 10-question assessment with single-attempt enforcement and leaderboard.
 
-**Current state: Documentation/specification only. No source code implemented yet.** All planning artifacts exist in `docs/`. Implementation follows task breakdowns in `docs/tasks/`. When any source code is modified, update this section to reflect the current state of the codebase.
+**Current state: Fully implemented.** Backend and frontend source code complete with tests. CI/CD pipeline configured. See `docs/tasks/` for task breakdowns. When source code changes significantly, update this section.
 
 ## Tech Stack
 
-- **Frontend:** React 19.2 + Vite + TypeScript + Tailwind CSS → Netlify
+- **Frontend:** React 19.2 + Vite + TypeScript + Tailwind CSS → Vercel
 - **Backend:** Node.js 24 + Express.js 5 + TypeScript → Render
 - **Database:** PostgreSQL via Supabase (`pg` driver, NOT an ORM)
 - **Auth:** Google OAuth 2.0 (`@react-oauth/google` client, `google-auth-library` server)
@@ -19,25 +19,31 @@ NanoQuiz (OpenQuiz) is a plug-n-play quiz platform. Organizations fork it, drop 
 ## Architecture
 
 ```
-Frontend (Netlify) ←→ Backend API (Render) ←→ PostgreSQL (Supabase)
+Frontend (Vercel) ←→ Backend API (Render) ←→ PostgreSQL (Supabase)
      :5173                  :3000                   Supabase host
 ```
 
 ### Backend Structure (`backend/src/`)
-- `index.ts` — Entry point, Express app setup, CORS, middleware chain
-- `routes/` — Route handlers: `auth.ts`, `quiz.ts`, `leaderboard.ts`, `health.ts`
-- `middleware/` — JWT validation, deadline check, CORS config
-- `services/` — Business logic for quiz flow, scoring, user management
-- `db/` — PostgreSQL connection pool (`pg.Pool`)
-- `data/` — JSON seed files (`faq_questions.json`, `trivia_questions.json`)
+- `index.ts` — Express app entry: CORS, morgan HTTP logging, auth middleware chain, graceful shutdown
+- `routes/auth.ts` — Google OAuth verify + upsert user + issue JWT. Onboarding (employee_id). Domain restriction via `RESTRICT_DOMAIN`.
+- `routes/quiz.ts` — Status, start (transaction: allocate 6 FAQ + 4 trivia), get question (sequential, no correct_opt), answer (Q10 triggers scoring in transaction)
+- `routes/leaderboard.ts` — Ranked scores (score DESC, duration ASC)
+- `routes/health.ts` — DB connectivity check
+- `middleware/auth.ts` — JWT verify, attaches `userId` to request
+- `middleware/cors.ts` — CORS + OPTIONS preflight
+- `middleware/deadline.ts` — 403 if past `EVENT_DEADLINE_ISO` (exempt: status, leaderboard)
+- `db/index.ts` — `pg.Pool` with SSL, `query<T>()` helper, `getClient()` for transactions
+- `utils/logger.ts` — Structured JSON logger (info/warn/error to stdout/stderr)
+- `seed.ts` — Idempotent question seeder from `data/*.json` files
 
 ### Frontend Structure (`frontend/src/`)
-- `main.tsx` — Entry, wrapped in `GoogleOAuthProvider`
-- `contexts/AuthContext.tsx` — Auth state (user, token, onboarding), localStorage persistence
-- `api/client.ts` — Axios instance with JWT interceptor
-- `pages/` — Route-level components (Login, Onboarding, Quiz, Completion, Leaderboard)
-- `components/` — Shared UI (QuizContainer, QuestionDisplay, StartQuizButton)
-- `hooks/` — Custom hooks (`useAuth`, `useQuiz`)
+- `main.tsx` — Entry, `GoogleOAuthProvider` wrapper
+- `App.tsx` — Lazy-loaded routes with Suspense + ErrorBoundary
+- `contexts/AuthContext.tsx` — Auth state (user, token, quizStatus, onboarding), localStorage persistence, auto-fetches `/quiz/status` on mount
+- `api/client.ts` — Axios with JWT interceptor, 401 auto-logout, custom errors (`ApiError`, `EventConcludedError`)
+- `pages/` — `Login`, `Onboarding`, `QuizContainer` (start screen), `Question`, `CompletionScreen`, `LeaderboardPage`
+- `components/` — `QuestionDisplay`, `StartQuizButton`, `ProtectedRoute` (gate with `requireEmployeeId`/`requireQuizStarted`/`requireQuizCompleted`), `ErrorBoundary`, `ErrorMessage`, `EventConcluded`, `OfflineBanner`
+- `hooks/` — `useAuth` (context consumer), `useOfflineStatus`
 
 ### Database Schema (`docs/data/schema.sql`)
 Three tables: `users`, `questions`, `user_sessions`
@@ -73,25 +79,35 @@ All `/api/*` endpoints (except auth) require Bearer JWT. Base URL: `VITE_API_BAS
 
 Full spec: `docs/api-docs/API.md`
 
-## Commands (Post-Implementation)
+## Commands
 
 ```bash
 # Backend
 cd backend
-npm run dev          # tsx with hot reload (port 3000)
+npm run dev          # tsx watch with hot reload (port 3000)
 npm run build        # tsc compile
-npm start            # node dist/index.js (production)
-npm run seed         # Load JSON questions into DB (idempotent)
+npm start            # Production: node dist/index.js
+npm run seed         # Idempotent question seeding from JSON files
+npm run cleanup-db   # Drop all quiz data (users, sessions) but keep questions
+npm run lint         # ESLint
+npm run typecheck    # tsc --noEmit
 npm test             # vitest
 
 # Frontend
 cd frontend
 npm run dev          # Vite dev server (port 5173)
-npm run build        # Production build
+npm run build        # tsc -b && vite build
+npm run preview      # Preview production build
+npm run lint         # ESLint
+npm run typecheck    # tsc -b
 npm test             # vitest + @testing-library/react
 
 # Database
 psql $SUPABASE_DB_URL -f docs/data/schema.sql   # Apply schema
+
+# Pre-deployment validation
+npx tsx scripts/validate-env.ts     # Check all required env vars are set
+npx tsx scripts/validate-schema.ts  # Verify DB schema matches expected (needs SUPABASE_DB_URL)
 ```
 
 ## Question Seeding
@@ -118,7 +134,7 @@ Define `/quiz/complete` **before** `/quiz/:sequence` in route config. React Rout
 | Variable | Required | Notes |
 |----------|----------|-------|
 | `PORT` | No | Default 3000 |
-| `FRONTEND_URL` | Yes | Netlify URL (CORS origin) |
+| `FRONTEND_URL` | Yes | Vercel URL (CORS origin) |
 | `GOOGLE_CLIENT_ID` | Yes | Google OAuth |
 | `JWT_SECRET` | Yes | App JWT signing |
 | `SUPABASE_DB_URL` | Yes | PostgreSQL connection string |
@@ -135,6 +151,24 @@ Define `/quiz/complete` **before** `/quiz/:sequence` in route config. React Rout
 ## MUST-Follow Rule for AI Agents
 
 The AI Agent MUST write any new documentation, analysis report, or reference file in the `./docs/ai_generated` directory, unless explicitly instructed otherwise.
+
+## Test Infrastructure
+
+- **Backend:** Vitest + `supertest` for HTTP-level route tests. JWT tokens generated per test via `jsonwebtoken`.
+- **Frontend:** Vitest + `@testing-library/react` (jsdom). MSW (`msw`) mocks API responses in tests.
+- **CI:** `.github/workflows/ci.yml` — lint → typecheck → test → build (backend + frontend). On main: also validate deploy (env vars + schema). Currently `workflow_dispatch` only (push/PR triggers commented out).
+
+## Logging
+
+Backend uses structured JSON logging via `backend/src/utils/logger.ts`. Morgan HTTP logs piped through `logger.info` with `{ source: 'http' }` context. Errors write to stderr, info/warn to stdout. All log entries include ISO timestamp, level, and message.
+
+## Repository Scripts
+
+`scripts/` contains pre-deployment tooling (run with `npx tsx`):
+- `validate-env.ts` — Checks all required env vars are set
+- `validate-schema.ts` — Verifies DB schema has expected tables, columns, and triggers
+- `pre-deploy.ts` — Orchestrates validation and build
+- `test-db-connection.ts` — Simple DB connectivity smoke test
 
 ## Key Reference Documents
 

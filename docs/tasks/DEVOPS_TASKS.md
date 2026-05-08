@@ -18,7 +18,7 @@ This document outlines the complete DevOps task breakdown for deploying and oper
 
 | Component | Service | Description |
 |-----------|---------|-------------|
-| Frontend | Netlify | React.js (Vite) static site |
+| Frontend | Vercel | React.js (Vite) static site |
 | Backend | Render | Node.js/Express REST API |
 | Database | Supabase | PostgreSQL database |
 | Authentication | Google OAuth | Google OAuth 2.0 |
@@ -323,7 +323,7 @@ Using `tsx` in production is possible but not recommended — it adds startup ov
 
 ```
 PORT=3000
-FRONTEND_URL=https://your-app.netlify.app
+FRONTEND_URL=https://your-app.vercel.app
 GOOGLE_CLIENT_ID=your_google_client_id.apps.googleusercontent.com
 RESTRICT_DOMAIN=exabyting.com
 JWT_SECRET=super_secret_string
@@ -334,11 +334,11 @@ TRACK_PER_QUESTION_TIME=true
 
 ---
 
-### T9: Configure Frontend Deployment (Netlify)
+### T9: Configure Frontend Deployment (Vercel)
 
 **Description:**
 
-Configure Netlify for frontend deployment with automatic deploys from git.
+Configure Vercel for frontend deployment with automatic deploys from git.
 
 **Dependencies:**
 
@@ -346,35 +346,34 @@ Configure Netlify for frontend deployment with automatic deploys from git.
 
 **Acceptance Criteria:**
 
-- [ ] Netlify site created
+- [ ] Vercel project created
 - [ ] Connected to GitHub repository
-- [ ] Build settings configured
+- [ ] Build settings configured (auto-detected from `vercel.json`)
 - [ ] Environment variables configured
 - [ ] Auto-deploy enabled on push to main
 
-**Netlify Configuration:**
+**Vercel Configuration:**
 
 | Setting | Value |
 |---------|-------|
-| Build Command | npm run build |
-| Publish Directory | dist |
-| Base Directory | frontend |
+| Root Directory | frontend |
+| Build Command | npm run build (auto-detected) |
+| Output Directory | dist (auto-detected) |
 
-**netlify.toml:**
+**vercel.json:**
 
-```toml
-[build]
-  base = "frontend"
-  command = "npm run build"
-  publish = "dist"
-
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
+```json
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "framework": "vite",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
 ```
 
-**Environment Variables (Netlify):**
+**Environment Variables (Vercel):**
 
 ```
 VITE_API_BASE_URL=https://your-api.onrender.com/api
@@ -387,7 +386,7 @@ VITE_GOOGLE_CLIENT_ID=your_google_client_id.apps.googleusercontent.com
 
 **Description:**
 
-Verify that Backend CORS is properly configured to accept only the Netlify frontend URL. **Note:** The actual CORS middleware implementation is handled in Backend Phase 6, T12 (Security phase - "Configure CORS Policy"). This task verifies the deployment configuration is correct.
+Verify that Backend CORS is properly configured to accept only the Vercel frontend URL. **Note:** The actual CORS middleware implementation is handled in Backend Phase 6, T12 (Security phase - "Configure CORS Policy"). This task verifies the deployment configuration is correct.
 
 **Dependencies:**
 
@@ -547,7 +546,7 @@ T4 ──► T5 ──┬──► T8 ──┬──► T9
 │           │         ↓                                              │
 │           │    Seeding runs (T11) ←───────────── Manual/triggered     │
 │           │                                                       │
-│           └── Frontend auto-deploys to Netlify (T9)                    │
+│           └── Frontend auto-deploys to Vercel (T9)                    │
 │                    ↓                                              │
 │               CORS configured (T10)                               │
 │                                                                     │
@@ -563,7 +562,7 @@ T4 ──► T5 ──┬──► T8 ──┬──► T9
 | Variable | Required | Example |
 |----------|----------|----------|
 | PORT | Yes | 3000 |
-| FRONTEND_URL | Yes | https://app.netlify.app |
+| FRONTEND_URL | Yes | https://your-app.vercel.app |
 | GOOGLE_CLIENT_ID | Yes | xxx.apps.googleusercontent.com |
 | RESTRICT_DOMAIN | No | exabyting.com |
 | JWT_SECRET | Yes | random_string |
@@ -582,7 +581,7 @@ T4 ──► T5 ──┬──► T8 ──┬──► T9
 
 ## Service Comparison
 
-| Feature | Render (Backend) | Netlify (Frontend) |
+| Feature | Render (Backend) | Vercel (Frontend) |
 |---------|-----------------|-------------------|
 | Free tier | Yes | Yes |
 | Auto-deploy | Yes | Yes |
