@@ -3,6 +3,7 @@ import request from 'supertest';
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { app } from '../src/index.js';
 import { db } from '../src/db/index.js';
+import { deriveQuestionOrder } from '../src/utils/shuffle.js';
 
 const USER_ID = 'user-quiz-list-1';
 
@@ -24,6 +25,12 @@ const insertParticipationStmt = db.prepare(
   `INSERT INTO participations (user_id, quiz_id, score, duration_ms)
    VALUES (?, ?, ?, ?)`,
 );
+const insertQuestionStmt = db.prepare(
+  `INSERT INTO questions (id, quiz_id, seq, prompt, options, correct_opt)
+   VALUES (?, ?, ?, ?, ?, ?)`,
+);
+const clearQuestionsStmt = db.prepare('DELETE FROM questions');
+const closeQuizWindowStmt = db.prepare('UPDATE quizzes SET end_at = ? WHERE id = ?');
 const clearQuizzesStmt = db.prepare('DELETE FROM quizzes');
 const clearParticipationsStmt = db.prepare('DELETE FROM participations');
 const insertUserStmt = db.prepare(
@@ -59,6 +66,7 @@ beforeAll(() => {
 
 beforeEach(() => {
   clearParticipationsStmt.run();
+  clearQuestionsStmt.run();
   clearQuizzesStmt.run();
 });
 
@@ -186,5 +194,151 @@ describe('GET /api/quizzes', () => {
         'userScore',
       ].sort(),
     );
+  });
+});
+
+// Full-cycle participation lock tests: real start → question fetch → submit → list.
+// No direct insertParticipationStmt usage — the lock is produced by the API itself.
+const FULL_CYCLE_QUESTION_IDS = ['fc-q1', 'fc-q2', 'fc-q3', 'fc-q4'];
+const FULL_CYCLE_QUESTION_COUNT = 3;
+const FULL_CYCLE_CORRECT_OPT: Record<string, number> = {
+  'fc-q1': 0,
+  'fc-q2': 1,
+  'fc-q3': 0,
+  'fc-q4': 1,
+};
+const FULL_CYCLE_OPTIONS_JSON: Record<string, string> = {
+  'fc-q1': '["FC1 A","FC1 B"]',
+  'fc-q2': '["FC2 A","FC2 B"]',
+  'fc-q3': '["FC3 A","FC3 B","FC3 C"]',
+  'fc-q4': '["FC4 A","FC4 B"]',
+};
+
+interface FullCycleQuizFixture {
+  id: string;
+  startOffsetMs?: number;
+  endOffsetMs?: number;
+}
+
+function insertQuizWithBank(fixture: FullCycleQuizFixture): void {
+  insertQuizStmt.run(
+    fixture.id,
+    `Quiz ${fixture.id}`,
+    `${fixture.id} description`,
+    FULL_CYCLE_QUESTION_COUNT,
+    15,
+    isoFromNow(fixture.startOffsetMs ?? -HOUR_MS),
+    isoFromNow(fixture.endOffsetMs ?? HOUR_MS),
+  );
+  FULL_CYCLE_QUESTION_IDS.forEach((questionId, index) => {
+    insertQuestionStmt.run(
+      questionId,
+      fixture.id,
+      index + 1,
+      `Prompt ${questionId}?`,
+      FULL_CYCLE_OPTIONS_JSON[questionId],
+      FULL_CYCLE_CORRECT_OPT[questionId],
+    );
+  });
+}
+
+function authedPost(url: string, body?: unknown): request.Test {
+  const token = jwt.sign({ userId: USER_ID, isAdmin: false }, 'test-jwt-secret', {
+    expiresIn: '2h',
+  });
+  const req = request(app).post(url).set('Authorization', `Bearer ${token}`);
+  return body !== undefined ? req.send(body) : req;
+}
+
+function authedQuestion(quizId: string, seed: string): request.Test {
+  const token = jwt.sign({ userId: USER_ID, isAdmin: false }, 'test-jwt-secret', {
+    expiresIn: '2h',
+  });
+  return request(app)
+    .get(`/api/quizzes/${quizId}/question/1`)
+    .query({ seed })
+    .set('Authorization', `Bearer ${token}`);
+}
+
+// Mixed answers derived from the actual start seed: first two correct, last wrong.
+function mixedAnswers(seed: string): number[] {
+  const order = deriveQuestionOrder(seed, FULL_CYCLE_QUESTION_IDS, FULL_CYCLE_QUESTION_COUNT);
+  return order.map(
+    (questionId, i) =>
+      i < 2 ? FULL_CYCLE_CORRECT_OPT[questionId] : 1 - FULL_CYCLE_CORRECT_OPT[questionId],
+  );
+}
+
+async function completeFullCycle(quizId: string): Promise<{ correctCount: number }> {
+  const start = await authedPost(`/api/quizzes/${quizId}/start`);
+  expect(start.status).toBe(200);
+
+  const question = await authedQuestion(quizId, start.body.seed as string);
+  expect(question.status).toBe(200);
+
+  const submit = await authedPost(`/api/quizzes/${quizId}/submit`, {
+    seed: start.body.seed,
+    answers: mixedAnswers(start.body.seed as string),
+    elapsedMs: 21_000,
+  });
+  expect(submit.status).toBe(200);
+  return submit.body as { correctCount: number };
+}
+
+describe('full-cycle participation lock', () => {
+  it('should_reflect_participation_in_quiz_list_when_full_cycle_completes', async () => {
+    insertQuizWithBank({ id: 'q-cycle-lock' });
+
+    const { correctCount } = await completeFullCycle('q-cycle-lock');
+
+    const res = await authedGet('/api/quizzes');
+
+    expect(res.status).toBe(200);
+    const item = res.body.find((q: { id: string }) => q.id === 'q-cycle-lock');
+    expect(item.participated).toBe(true);
+    expect(item.canStart).toBe(false);
+    expect(item.userScore).toBe(correctCount);
+  });
+
+  it('should_return_409_when_starting_again_after_full_cycle', async () => {
+    insertQuizWithBank({ id: 'q-cycle-409' });
+    await completeFullCycle('q-cycle-409');
+
+    const res = await authedPost('/api/quizzes/q-cycle-409/start');
+
+    expect(res.status).toBe(409);
+    expect(res.body.error).toBe('ALREADY_PARTICIPATED');
+    expect(res.body.message).toBeTypeOf('string');
+    expect(res.body.message.length).toBeGreaterThan(0);
+  });
+
+  it('should_return_403_when_window_closed_even_if_participated', async () => {
+    // Documents the start handler's guard order: the active-window check
+    // (403 QUIZ_NOT_ACTIVE) precedes the participation check (409). The cycle
+    // runs while live, then the window is closed before the second start.
+    insertQuizWithBank({ id: 'q-cycle-window' });
+    await completeFullCycle('q-cycle-window');
+    closeQuizWindowStmt.run(isoFromNow(-HOUR_MS), 'q-cycle-window');
+
+    const res = await authedPost('/api/quizzes/q-cycle-window/start');
+
+    expect(res.status).toBe(403);
+    expect(res.body.error).toBe('QUIZ_NOT_ACTIVE');
+  });
+
+  it('should_omit_answer_keys_when_starting_and_fetching_question_in_full_cycle', async () => {
+    insertQuizWithBank({ id: 'q-cycle-keys' });
+
+    const start = await authedPost('/api/quizzes/q-cycle-keys/start');
+    expect(start.status).toBe(200);
+    expect(Object.keys(start.body).sort()).toEqual(
+      ['questionCount', 'quizId', 'seed', 'timeLimitSeconds'].sort(),
+    );
+    expect(JSON.stringify(start.body)).not.toContain('correct_opt');
+
+    const question = await authedQuestion('q-cycle-keys', start.body.seed as string);
+    expect(question.status).toBe(200);
+    expect(Object.keys(question.body).sort()).toEqual(['options', 'seq', 'text', 'total'].sort());
+    expect(JSON.stringify(question.body)).not.toContain('correct_opt');
   });
 });
