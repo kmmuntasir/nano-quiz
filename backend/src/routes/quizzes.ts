@@ -253,7 +253,12 @@ function submitQuiz(req: Request, res: Response): void {
       } catch {
         return false;
       }
-      return typeof a === 'number' && Number.isInteger(a) && a >= 0 && a < optionCount;
+      // -1 is the client timeout sentinel: valid input, scores incorrect.
+      return (
+        typeof a === 'number' &&
+        Number.isInteger(a) &&
+        (a === -1 || (a >= 0 && a < optionCount))
+      );
     });
   const elapsedValid =
     typeof elapsedMs === 'number' && Number.isFinite(elapsedMs) && elapsedMs >= 0;

@@ -205,6 +205,47 @@ describe('POST /api/quizzes/:id/submit', () => {
     expect(res.body.error).toBe('VALIDATION_ERROR');
   });
 
+  it('should_score_zero_when_all_answers_are_timeout_sentinels', async () => {
+    insertQuiz({ id: 'q-timeout' });
+
+    const res = await submit('q-timeout', {
+      seed: SEED,
+      answers: [-1, -1, -1],
+      elapsedMs: 45_000,
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body.score).toBe(0);
+    const row = selectParticipationRowStmt.get(USER_ID, 'q-timeout') as
+      | { score: number; duration_ms: number }
+      | undefined;
+    expect(row).toBeDefined();
+    expect(row!.score).toBe(0);
+  });
+
+  it('should_return_400_when_answer_is_below_negative_one', async () => {
+    insertQuiz({ id: 'q-live' });
+
+    const answers = correctAnswers();
+    answers[1] = -2;
+    const res = await submit('q-live', { seed: SEED, answers, elapsedMs: 1_000 });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe('VALIDATION_ERROR');
+  });
+
+  it('should_score_positionally_when_sentinels_mixed_with_correct_answers', async () => {
+    insertQuiz({ id: 'q-mixed' });
+    const answers = correctAnswers();
+    answers[0] = -1;
+
+    const res = await submit('q-mixed', { seed: SEED, answers, elapsedMs: 2_500 });
+
+    expect(res.status).toBe(200);
+    expect(res.body.score).toBe(QUESTION_COUNT - 1);
+    expect(res.body.correctCount).toBe(QUESTION_COUNT - 1);
+  });
+
   it('should_return_400_when_answer_is_out_of_bounds', async () => {
     insertQuiz({ id: 'q-live' });
 
