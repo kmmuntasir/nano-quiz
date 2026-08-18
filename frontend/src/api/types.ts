@@ -10,3 +10,10 @@ export interface Quiz {
   participated: boolean;
   userScore: number | null;
 }
+
+export interface QuizSession {
+  seed: string;
+  quizId: string;
+  questionCount: number;
+  timeLimitSeconds: number;
+}

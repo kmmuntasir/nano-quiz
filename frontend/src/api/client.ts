@@ -4,7 +4,7 @@ import axios, {
   type InternalAxiosRequestConfig,
 } from 'axios';
 import { AUTH_STORAGE_KEY } from '../contexts/auth';
-import type { Quiz } from './types';
+import type { Quiz, QuizSession } from './types';
 
 const AUTH_PATH = '/auth/google';
 
@@ -94,5 +94,10 @@ apiClient.interceptors.response.use(
 
 export async function fetchQuizzes(): Promise<Quiz[]> {
   const { data } = await apiClient.get<Quiz[]>('/quizzes');
+  return data;
+}
+
+export async function startQuiz(id: string): Promise<QuizSession> {
+  const { data } = await apiClient.post<QuizSession>(`/quizzes/${id}/start`);
   return data;
 }
