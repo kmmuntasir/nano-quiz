@@ -9,6 +9,7 @@ const QuizList = lazy(() => import('./pages/QuizList.tsx'));
 const Login = lazy(() => import('./pages/Login.tsx'));
 const QuizPlay = lazy(() => import('./pages/QuizPlay.tsx'));
 const Completion = lazy(() => import('./pages/Completion.tsx'));
+const Leaderboard = lazy(() => import('./pages/Leaderboard.tsx'));
 
 function PageLoadingFallback() {
   return (
@@ -48,6 +49,14 @@ function App() {
                   element={
                     <ProtectedRoute>
                       <Completion />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/quizzes/:id/leaderboard"
+                  element={
+                    <ProtectedRoute>
+                      <Leaderboard />
                     </ProtectedRoute>
                   }
                 />

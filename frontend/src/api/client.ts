@@ -4,7 +4,13 @@ import axios, {
   type InternalAxiosRequestConfig,
 } from 'axios';
 import { AUTH_STORAGE_KEY } from '../contexts/auth';
-import type { Question, Quiz, QuizSession, SubmitResult } from './types';
+import type {
+  LeaderboardData,
+  Question,
+  Quiz,
+  QuizSession,
+  SubmitResult,
+} from './types';
 
 const AUTH_PATH = '/auth/google';
 
@@ -106,6 +112,11 @@ export async function fetchQuestion(quizId: string, seq: number, seed: string): 
   const { data } = await apiClient.get<Question>(`/quizzes/${quizId}/question/${seq}`, {
     params: { seed },
   });
+  return data;
+}
+
+export async function fetchLeaderboard(quizId: string): Promise<LeaderboardData> {
+  const { data } = await apiClient.get<LeaderboardData>(`/quizzes/${quizId}/leaderboard`);
   return data;
 }
 

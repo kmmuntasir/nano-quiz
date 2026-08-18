@@ -25,6 +25,21 @@ export interface Question {
   options: string[];
 }
 
+export interface LeaderboardEntry {
+  rank: number;
+  name: string;
+  score: number;
+  durationMs: number;
+}
+
+export interface LeaderboardData {
+  quizId: string;
+  page: number;
+  pageSize: number;
+  total: number;
+  entries: LeaderboardEntry[];
+}
+
 export interface SubmitResult {
   score: number;
   totalQuestions: number;
