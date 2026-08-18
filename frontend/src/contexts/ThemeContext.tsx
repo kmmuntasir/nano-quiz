@@ -1,5 +1,26 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { THEME_STORAGE_KEY, ThemeContext, type Theme, type ThemeContextValue } from './theme';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react';
+import {
+  THEME_STORAGE_KEY,
+  ThemeContext,
+  type ResolvedTheme,
+  type Theme,
+  type ThemeContextValue,
+} from './theme';
+
+const DARK_MEDIA_QUERY = '(prefers-color-scheme: dark)';
+
+const NEXT_THEME: Record<Theme, Theme> = {
+  light: 'dark',
+  dark: 'system',
+  system: 'light',
+};
 
 function readStoredTheme(): Theme {
   const stored = localStorage.getItem(THEME_STORAGE_KEY);
@@ -9,28 +30,42 @@ function readStoredTheme(): Theme {
   return 'system';
 }
 
+function prefersDark(): boolean {
+  const darkMedia = window.matchMedia?.(DARK_MEDIA_QUERY);
+  return darkMedia?.matches === true;
+}
+
 interface ThemeProviderProps {
   children: ReactNode;
 }
 
 export function ThemeProvider({ children }: ThemeProviderProps) {
   const [theme, setThemeState] = useState<Theme>(readStoredTheme);
+  const [systemDark, setSystemDark] = useState<boolean>(prefersDark);
 
+  const resolved: ResolvedTheme = theme === 'system' ? (systemDark ? 'dark' : 'light') : theme;
+
+  // Reflect the resolved theme on <html> (Tailwind darkMode: 'class').
+  useLayoutEffect(() => {
+    document.documentElement.classList.toggle('dark', resolved === 'dark');
+  }, [resolved]);
+
+  // While in system mode, re-resolve when the OS preference changes.
   useEffect(() => {
-    const darkMedia = window.matchMedia?.('(prefers-color-scheme: dark)');
-    const applyTheme = (): void => {
-      const prefersDark = darkMedia?.matches === true;
-      document.documentElement.classList.toggle(
-        'dark',
-        theme === 'dark' || (theme === 'system' && prefersDark),
-      );
-    };
-    applyTheme();
-    if (darkMedia !== undefined && theme === 'system') {
-      darkMedia.addEventListener('change', applyTheme);
-      return () => darkMedia.removeEventListener('change', applyTheme);
+    if (theme !== 'system') {
+      return undefined;
     }
-    return undefined;
+    const darkMedia = window.matchMedia?.(DARK_MEDIA_QUERY);
+    if (darkMedia === undefined) {
+      return undefined;
+    }
+    const handleChange = (): void => {
+      setSystemDark(darkMedia.matches);
+    };
+    darkMedia.addEventListener('change', handleChange);
+    return () => {
+      darkMedia.removeEventListener('change', handleChange);
+    };
   }, [theme]);
 
   const setTheme = useCallback((next: Theme) => {
@@ -38,7 +73,16 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     setThemeState(next);
   }, []);
 
-  const value = useMemo<ThemeContextValue>(() => ({ theme, setTheme }), [theme, setTheme]);
+  const toggle = useCallback(() => {
+    const next = NEXT_THEME[theme];
+    localStorage.setItem(THEME_STORAGE_KEY, next);
+    setThemeState(next);
+  }, [theme]);
+
+  const value = useMemo<ThemeContextValue>(
+    () => ({ theme, resolved, setTheme, toggle }),
+    [theme, resolved, setTheme, toggle],
+  );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
