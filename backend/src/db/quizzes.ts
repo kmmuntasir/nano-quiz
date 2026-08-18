@@ -60,8 +60,72 @@ const selectQuizzesForUserStmt = db.prepare<QuizListParams, QuizListRow>(
      END DESC`,
 );
 
+export interface QuizRow {
+  id: string;
+  title: string;
+  description: string;
+  questionCount: number;
+  timeLimitSeconds: number;
+  startAt: string;
+  endAt: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface QuizIdParam {
+  quizId: string;
+}
+
+interface ParticipationParams {
+  userId: string;
+  quizId: string;
+}
+
+const selectQuizByIdStmt = db.prepare<QuizIdParam, QuizRow>(
+  `SELECT
+     id,
+     title,
+     description,
+     question_count AS questionCount,
+     time_limit_seconds AS timeLimitSeconds,
+     start_at AS startAt,
+     end_at AS endAt,
+     created_at AS createdAt,
+     updated_at AS updatedAt
+   FROM quizzes
+   WHERE id = @quizId`,
+);
+
+interface CountRow {
+  count: number;
+}
+
+const countParticipationStmt = db.prepare<ParticipationParams, CountRow>(
+  `SELECT COUNT(*) AS count
+   FROM participations
+   WHERE user_id = @userId AND quiz_id = @quizId`,
+);
+
+const countQuestionsStmt = db.prepare<QuizIdParam, CountRow>(
+  `SELECT COUNT(*) AS count
+   FROM questions
+   WHERE quiz_id = @quizId`,
+);
+
 export const quizzes = {
   listForUser(userId: string, now: string): QuizListRow[] {
     return selectQuizzesForUserStmt.all({ userId, now });
+  },
+
+  getById(quizId: string): QuizRow | undefined {
+    return selectQuizByIdStmt.get({ quizId });
+  },
+
+  hasParticipation(userId: string, quizId: string): boolean {
+    return countParticipationStmt.get({ userId, quizId })!.count > 0;
+  },
+
+  countQuestions(quizId: string): number {
+    return countQuestionsStmt.get({ quizId })!.count;
   },
 };
