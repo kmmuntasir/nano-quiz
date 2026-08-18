@@ -1,5 +1,14 @@
 import { render, screen } from '@testing-library/react';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 import App from './App';
+
+function renderApp(): void {
+  render(
+    <GoogleOAuthProvider clientId="test-client-id">
+      <App />
+    </GoogleOAuthProvider>,
+  );
+}
 
 describe('App', () => {
   beforeEach(() => {
@@ -8,7 +17,7 @@ describe('App', () => {
   });
 
   it('redirects unauthenticated visitors to the login page', async () => {
-    render(<App />);
+    renderApp();
 
     expect(await screen.findByRole('heading', { name: 'NanoQuiz' })).toBeInTheDocument();
   });
@@ -21,8 +30,8 @@ describe('App', () => {
         user: { id: '1', name: 'Test User', email: 'test@example.com', isAdmin: false },
       }),
     );
-    render(<App />);
+    renderApp();
 
-    expect(await screen.findByRole('heading', { name: 'Home' })).toBeInTheDocument();
+    expect(await screen.findByText('Your quiz list will appear here')).toBeInTheDocument();
   });
 });
