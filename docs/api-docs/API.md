@@ -164,11 +164,11 @@ Query params: `page` (default `1`) and `pageSize` (default `20`, capped at `100`
 
 ## Admin
 
-All admin endpoints require the JWT to carry `isAdmin: true` (`require-admin` middleware). Admin UI is hidden from non-admins on the frontend; the middleware is the real security boundary.
+All admin endpoints require the JWT to carry `isAdmin: true` (`require-auth` + `require-admin` middleware). `401` without/with an invalid token; `403 FORBIDDEN` with a valid non-admin token. Admin UI is hidden from non-admins on the frontend; the middleware is the real security boundary.
 
 ### `POST /api/admin/quizzes`
 
-Create a quiz.
+Create a quiz. The question bank is empty at create time, so there is **no bank-size check** here.
 
 **Request**
 
@@ -183,13 +183,27 @@ Create a quiz.
 }
 ```
 
-**Response** `201` — the created quiz (same shape as `GET /api/quizzes` item, plus `id`).
+`title` (non-empty), `questionCount` (positive integer), `startAt`/`endAt` (ISO-8601 UTC, `endAt` after `startAt`) are required. `timeLimitSeconds` is optional (defaults to `15`), `description` optional (defaults to `""`).
 
-**Errors** `400` validation (`questionCount` must be positive; `endAt` after `startAt`).
+**Response** `201`
+
+```json
+{
+  "id": "q1",
+  "title": "General Knowledge",
+  "description": "A 10-question general knowledge quiz.",
+  "questionCount": 10,
+  "timeLimitSeconds": 15,
+  "startAt": "2026-08-01T09:00:00Z",
+  "endAt": "2026-08-31T21:00:00Z"
+}
+```
+
+**Errors** `400 VALIDATION_ERROR` — empty/non-string title; `questionCount` or `timeLimitSeconds` not a positive integer; `startAt`/`endAt` not a well-formed ISO-8601 UTC timestamp (`YYYY-MM-DDTHH:mm:ss(.sss)Z`); `endAt` <= `startAt`.
 
 ### `GET /api/admin/quizzes`
 
-Admin's quiz list (includes attempt counts for delete/edit decisions).
+Admin's quiz list (includes question bank size and attempt counts for delete/edit decisions).
 
 **Response** `200`
 
@@ -198,6 +212,7 @@ Admin's quiz list (includes attempt counts for delete/edit decisions).
   {
     "id": "q1",
     "title": "General Knowledge",
+    "description": "A 10-question general knowledge quiz.",
     "questionCount": 10,
     "timeLimitSeconds": 15,
     "startAt": "2026-08-01T09:00:00Z",
@@ -210,13 +225,19 @@ Admin's quiz list (includes attempt counts for delete/edit decisions).
 
 ### `PUT /api/admin/quizzes/:id`
 
-Edit a quiz. **Blocked (`409`) once the quiz has any attempt.** `questionCount` must not exceed the current question bank size.
+Edit a quiz. Guards run in order: `404 NOT_FOUND` (unknown quiz) → `409 QUIZ_HAS_ATTEMPTS` (any attempt exists) → `400 VALIDATION_ERROR` (field validation, including `questionCount` exceeding the current question bank size — this is a `400`, not a `409`).
 
-**Request** — same fields as create (all editable).
+**Request** — same fields as create; `title`, `questionCount`, `startAt`, `endAt` required, `timeLimitSeconds`/`description` optional with the same defaults as create.
+
+**Response** `200` — the updated quiz (same shape as the create `201` body).
 
 ### `DELETE /api/admin/quizzes/:id`
 
-Delete a quiz **and all its data** (questions, attempts, leaderboard entries). Allowed regardless of attempts.
+Delete a quiz **and all its data**. Allowed regardless of attempts. Runs in one transaction: participations (attempts, leaderboard entries) are removed explicitly (their FK has no cascade), questions via FK cascade from the quiz delete.
+
+**Response** `204` (empty body).
+
+**Errors** `404 NOT_FOUND` — unknown quiz.
 
 ### `GET /api/admin/quizzes/:id/questions`
 
@@ -230,9 +251,11 @@ List the quiz's question bank (admin sees `correctOpt`).
 ]
 ```
 
+**Errors** `404 NOT_FOUND` — unknown quiz.
+
 ### `POST /api/admin/quizzes/:id/questions`
 
-Add a question to the bank.
+Add a question to the bank. The new question's `seq` is `max(existing seq) + 1`; gaps from prior deletes are left as-is.
 
 **Request**
 
@@ -240,19 +263,33 @@ Add a question to the bank.
 { "text": "What is the capital of France?", "options": ["Berlin", "Madrid", "Paris", "Rome"], "correctOpt": 2 }
 ```
 
-**Response** `201` — the created question (with `id`).
+`text` non-empty; `options` an array of at least 2 non-empty strings; `correctOpt` an integer in `[0, options.length - 1]`.
+
+**Response** `201`
+
+```json
+{ "id": "qs1", "text": "What is the capital of France?", "options": ["Berlin", "Madrid", "Paris", "Rome"], "correctOpt": 2 }
+```
+
+**Errors** `400 VALIDATION_ERROR` (text/options/correctOpt) · `404 NOT_FOUND` (unknown quiz).
 
 ### `PUT /api/admin/quizzes/:id/questions/:questionId`
 
-Edit a question. **Blocked (`409`) once the quiz has any attempt.**
+Edit a question. Guards run in order: `404 NOT_FOUND` (unknown quiz, then unknown question — scoped to this quiz) → `409 QUIZ_HAS_ATTEMPTS` → `400 VALIDATION_ERROR`.
+
+**Request** — same fields as create question.
+
+**Response** `200` — the updated question (same shape as the question `201` body).
 
 ### `DELETE /api/admin/quizzes/:id/questions/:questionId`
 
-Delete a question. **Blocked (`409`) once the quiz has any attempt** (deleting would break the active question set).
+Delete a question. Guards run in order: `404 NOT_FOUND` (unknown quiz, then unknown question — scoped to this quiz) → `409 QUIZ_HAS_ATTEMPTS` (deleting would break the active question set).
+
+**Response** `204` (empty body).
 
 ### `GET /api/admin/quizzes/:id/leaderboard`
 
-Admin's read-only view of a quiz's leaderboard — same shape as the public leaderboard. No modification endpoints exist.
+Admin's read-only view of a quiz's leaderboard — same handler, shape, pagination, and errors as the public `GET /api/quizzes/:id/leaderboard`, admin-gated (`401`/`403`). No modification endpoints exist.
 
 ---
 
