@@ -8,7 +8,7 @@ import LeaderboardTable from '../components/LeaderboardTable';
 const ROW_SKELETON_COUNT = 5;
 
 const CARD_CLASS =
-  'flex w-full max-w-md flex-col gap-4 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900';
+  'flex w-full flex-col gap-4 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900';
 
 export default function AdminLeaderboard() {
   const { id } = useParams<{ id: string }>();
@@ -46,7 +46,20 @@ export default function AdminLeaderboard() {
     <div className="flex min-h-screen flex-col bg-brand-50 font-sans dark:bg-slate-950">
       <TopBar />
       <main className="flex flex-1 flex-col items-center p-page">
-        <div className="flex w-full max-w-md flex-col gap-4">
+        <div className="flex w-full max-w-md flex-col gap-4 md:max-w-2xl lg:max-w-4xl">
+          <div className="flex items-center justify-between gap-4">
+            <h1 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+              Leaderboard
+            </h1>
+            {data !== null && (
+              <Link
+                to="/admin"
+                className="text-sm font-medium text-brand-600 hover:underline dark:text-brand-400"
+              >
+                Back to admin
+              </Link>
+            )}
+          </div>
           {data === null && error === null && (
             <div className={CARD_CLASS} aria-busy="true" aria-label="Loading leaderboard">
               {Array.from({ length: ROW_SKELETON_COUNT }, (_, index) => (
@@ -71,17 +84,7 @@ export default function AdminLeaderboard() {
               </button>
             </div>
           )}
-          {data !== null && (
-            <>
-              <LeaderboardTable data={data} onPageChange={goToPage} />
-              <Link
-                to="/admin"
-                className="rounded-md border border-slate-200 px-4 py-2 text-center text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-              >
-                Back to admin
-              </Link>
-            </>
-          )}
+          {data !== null && <LeaderboardTable data={data} onPageChange={goToPage} />}
         </div>
       </main>
     </div>

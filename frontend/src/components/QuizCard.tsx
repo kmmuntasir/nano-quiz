@@ -46,9 +46,11 @@ export default function QuizCard({
   const status = deriveStatus(quiz.startAt, quiz.endAt, now);
 
   return (
-    <article className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-card dark:border-slate-800 dark:bg-slate-900">
+    <article className="flex h-full flex-col gap-3 rounded-lg border border-slate-200 bg-white p-card dark:border-slate-800 dark:bg-slate-900">
       <div className="flex items-start justify-between gap-2">
-        <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">{quiz.title}</h2>
+        <h2 className="text-base font-semibold text-slate-900 md:text-lg dark:text-slate-100">
+          {quiz.title}
+        </h2>
         <span
           className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_STYLES[status]}`}
         >
@@ -56,7 +58,7 @@ export default function QuizCard({
         </span>
       </div>
       {quiz.description && (
-        <p className="text-sm text-slate-600 dark:text-slate-300">{quiz.description}</p>
+        <p className="line-clamp-2 text-sm text-slate-600 dark:text-slate-300">{quiz.description}</p>
       )}
       <p className="text-xs text-slate-500 dark:text-slate-400">
         {quiz.questionCount} questions · {quiz.timeLimitSeconds}s per question ·{' '}
@@ -67,7 +69,9 @@ export default function QuizCard({
           You scored {quiz.userScore ?? 0}/{quiz.questionCount}
         </p>
       )}
-      <StartQuizButton quiz={quiz} now={now} onStarted={onStarted} onStartError={onStartError} />
+      <div className="mt-auto">
+        <StartQuizButton quiz={quiz} now={now} onStarted={onStarted} onStartError={onStartError} />
+      </div>
     </article>
   );
 }

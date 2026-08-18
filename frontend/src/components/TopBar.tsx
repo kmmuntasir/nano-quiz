@@ -8,7 +8,7 @@ export default function TopBar() {
 
   return (
     <header className="border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-      <div className="mx-auto flex max-w-2xl items-center justify-between gap-4 p-page">
+      <div className="mx-auto flex w-full max-w-2xl items-center justify-between gap-4 p-page md:max-w-4xl lg:max-w-6xl">
         <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{user?.name}</p>
         <div className="flex items-center gap-2">
           <button

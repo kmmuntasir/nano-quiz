@@ -302,7 +302,7 @@ function QuestionItem({
   return (
     <li className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-white p-card dark:border-slate-800 dark:bg-slate-900">
       <div className="flex items-start justify-between gap-4">
-        <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
+        <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 md:text-base">
           {question.text}
         </p>
         {!locked && (
@@ -324,7 +324,7 @@ function QuestionItem({
           </div>
         )}
       </div>
-      <ul className="flex flex-col gap-1">
+      <ul className="mt-2 flex flex-col gap-1.5">
         {question.options.map((option, index) => {
           const isCorrect = index === question.correctOpt;
           return (
@@ -441,7 +441,7 @@ export default function AdminQuestions() {
     <div className="flex min-h-screen flex-col bg-brand-50 font-sans dark:bg-slate-950">
       <TopBar />
       <main className="flex flex-1 flex-col items-center p-page">
-        <div className="w-full max-w-3xl">
+        <div className="w-full max-w-md md:max-w-2xl lg:max-w-3xl">
           <div className="mb-4 flex items-center justify-between gap-4">
             <div>
               <h1 className="text-lg font-semibold text-slate-900 dark:text-slate-100">

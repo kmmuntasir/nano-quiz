@@ -57,9 +57,16 @@ export default function QuizList() {
     <div className="flex min-h-screen flex-col bg-brand-50 font-sans dark:bg-slate-950">
       <TopBar />
       <main className="flex flex-1 flex-col items-center p-page">
-        <div className="w-full max-w-md">
+        <div className="w-full max-w-md md:max-w-4xl lg:max-w-6xl">
+          <h1 className="mb-6 text-xl font-bold text-slate-900 md:text-2xl dark:text-slate-100">
+            Quizzes
+          </h1>
           {quizzes === null && error === null && (
-            <div className="flex flex-col gap-4" aria-busy="true" aria-label="Loading quizzes">
+            <div
+              className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+              aria-busy="true"
+              aria-label="Loading quizzes"
+            >
               {Array.from({ length: QUIZ_SKELETON_COUNT }, (_, index) => (
                 <div
                   key={index}
@@ -86,9 +93,9 @@ export default function QuizList() {
             </div>
           )}
           {quizzes !== null && quizzes.length > 0 && (
-            <ul className="flex flex-col gap-4">
+            <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {quizzes.map((quiz) => (
-                <li key={quiz.id}>
+                <li key={quiz.id} className="h-full">
                   <QuizCard quiz={quiz} onStarted={handleStarted} onStartError={handleStartError} />
                 </li>
               ))}

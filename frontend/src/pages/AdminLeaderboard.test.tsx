@@ -68,8 +68,8 @@ describe('AdminLeaderboard', () => {
     mockPagedLeaderboard();
     renderAdminLeaderboard();
 
-    expect(await screen.findByText('1. User 1')).toBeInTheDocument();
-    expect(screen.getByText('20. User 20')).toBeInTheDocument();
+    expect(await screen.findByText('User 1')).toBeInTheDocument();
+    expect(screen.getByText('User 20')).toBeInTheDocument();
     expect(screen.getByText('Page 1 of 2 · 25 entries')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Previous page' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Next page' })).toBeEnabled();
@@ -79,10 +79,10 @@ describe('AdminLeaderboard', () => {
     mockPagedLeaderboard();
     renderAdminLeaderboard();
 
-    await screen.findByText('1. User 1');
+    await screen.findByText('User 1');
     await userEvent.click(screen.getByRole('button', { name: 'Next page' }));
 
-    expect(await screen.findByText('21. User 21')).toBeInTheDocument();
+    expect(await screen.findByText('User 21')).toBeInTheDocument();
     expect(requestedPages.at(-1)).toBe(2);
   });
 
@@ -95,7 +95,7 @@ describe('AdminLeaderboard', () => {
     mockPagedLeaderboard();
     await userEvent.click(screen.getByRole('button', { name: 'Retry' }));
 
-    expect(await screen.findByText('1. User 1')).toBeInTheDocument();
+    expect(await screen.findByText('User 1')).toBeInTheDocument();
   });
 
   it('should_render_back_link_to_admin', async () => {

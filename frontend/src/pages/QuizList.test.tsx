@@ -60,7 +60,7 @@ describe('QuizList', () => {
     mockQuizzes(FIXTURES);
     await renderQuizList();
 
-    const titles = await screen.findAllByRole('heading');
+    const titles = await screen.findAllByRole('heading', { level: 2 });
     expect(titles.map((heading) => heading.textContent)).toEqual([
       'General Knowledge',
       'Science Round',

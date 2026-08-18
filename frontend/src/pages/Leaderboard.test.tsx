@@ -82,8 +82,8 @@ describe('Leaderboard', () => {
     mockLeaderboard(FIXTURE);
     renderLeaderboard();
 
-    expect(await screen.findByText('1. Ada Lovelace')).toBeInTheDocument();
-    expect(screen.getByText('2. Grace Hopper')).toBeInTheDocument();
+    expect(await screen.findByText('Grace Hopper')).toBeInTheDocument();
+    expect(screen.getAllByText('Ada Lovelace').length).toBeGreaterThan(1);
     expect(screen.getAllByText('5 pts').length).toBeGreaterThan(0);
     expect(screen.getByText('1m 05s')).toBeInTheDocument();
     expect(screen.getByText('30s')).toBeInTheDocument();
@@ -99,7 +99,7 @@ describe('Leaderboard', () => {
     mockLeaderboard(FIXTURE);
     await userEvent.click(screen.getByRole('button', { name: 'Retry' }));
 
-    expect(await screen.findByText('1. Ada Lovelace')).toBeInTheDocument();
+    expect(await screen.findByText('Grace Hopper')).toBeInTheDocument();
   });
 
   it('should_show_empty_state_when_no_entries', async () => {
@@ -124,8 +124,8 @@ describe('Leaderboard', () => {
     mockPagedLeaderboard();
     renderLeaderboard();
 
-    expect(await screen.findByText('1. User 1')).toBeInTheDocument();
-    expect(screen.getByText('20. User 20')).toBeInTheDocument();
+    expect(await screen.findByText('User 1')).toBeInTheDocument();
+    expect(screen.getByText('User 20')).toBeInTheDocument();
     expect(screen.getByText('Page 1 of 2 · 25 entries')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Previous page' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Next page' })).toBeEnabled();
@@ -135,11 +135,11 @@ describe('Leaderboard', () => {
     mockPagedLeaderboard();
     renderLeaderboard();
 
-    await screen.findByText('1. User 1');
+    await screen.findByText('User 1');
     await userEvent.click(screen.getByRole('button', { name: 'Next page' }));
 
-    expect(await screen.findByText('21. User 21')).toBeInTheDocument();
-    expect(screen.getByText('25. User 25')).toBeInTheDocument();
+    expect(await screen.findByText('User 21')).toBeInTheDocument();
+    expect(screen.getByText('User 25')).toBeInTheDocument();
     expect(requestedPages.at(-1)).toBe(2);
     expect(screen.getByRole('button', { name: 'Next page' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Previous page' })).toBeEnabled();
@@ -149,12 +149,12 @@ describe('Leaderboard', () => {
     mockPagedLeaderboard();
     renderLeaderboard();
 
-    await screen.findByText('1. User 1');
+    await screen.findByText('User 1');
     await userEvent.click(screen.getByRole('button', { name: 'Next page' }));
-    await screen.findByText('21. User 21');
+    await screen.findByText('User 21');
     await userEvent.click(screen.getByRole('button', { name: 'Previous page' }));
 
-    expect(await screen.findByText('1. User 1')).toBeInTheDocument();
+    expect(await screen.findByText('User 1')).toBeInTheDocument();
     expect(requestedPages.at(-1)).toBe(1);
   });
 
@@ -162,7 +162,7 @@ describe('Leaderboard', () => {
     mockPagedLeaderboard();
     renderLeaderboard();
 
-    await screen.findByText('1. User 1');
+    await screen.findByText('User 1');
     mockLeaderboardError();
     await userEvent.click(screen.getByRole('button', { name: 'Next page' }));
 
@@ -171,7 +171,7 @@ describe('Leaderboard', () => {
     mockPagedLeaderboard();
     await userEvent.click(screen.getByRole('button', { name: 'Retry' }));
 
-    expect(await screen.findByText('21. User 21')).toBeInTheDocument();
+    expect(await screen.findByText('User 21')).toBeInTheDocument();
     expect(requestedPages.at(-1)).toBe(2);
   });
 
@@ -179,7 +179,7 @@ describe('Leaderboard', () => {
     mockPagedLeaderboard();
     renderLeaderboard();
 
-    await screen.findByText('1. User 1');
+    await screen.findByText('User 1');
     mockLeaderboard({ quizId: 'q1', page: 3, pageSize: PAGE_SIZE, total: TOTAL_ENTRIES, entries: [] });
     await userEvent.click(screen.getByRole('button', { name: 'Next page' }));
 
@@ -188,7 +188,7 @@ describe('Leaderboard', () => {
     mockPagedLeaderboard();
     await userEvent.click(screen.getByRole('button', { name: 'Back to page 1' }));
 
-    expect(await screen.findByText('1. User 1')).toBeInTheDocument();
+    expect(await screen.findByText('User 1')).toBeInTheDocument();
     expect(requestedPages.at(-1)).toBe(1);
   });
 });

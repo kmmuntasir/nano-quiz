@@ -14,7 +14,7 @@ export default function TimerCountdown({ remaining }: TimerCountdownProps) {
     <p
       role="timer"
       aria-live="polite"
-      className={`text-sm font-semibold tabular-nums ${
+      className={`text-sm font-semibold tabular-nums md:text-base ${
         urgent ? 'text-red-600 dark:text-red-400' : 'text-slate-500 dark:text-slate-400'
       }`}
     >

@@ -27,8 +27,10 @@ describe('LeaderboardTable', () => {
   it('should_render_ranked_rows_and_durations_when_entries_exist', () => {
     renderTable(FIXTURE);
 
-    expect(screen.getByText('1. Ada Lovelace')).toBeInTheDocument();
-    expect(screen.getByText('2. Grace Hopper')).toBeInTheDocument();
+    expect(screen.getByText('Ada Lovelace')).toBeInTheDocument();
+    expect(screen.getByText('Grace Hopper')).toBeInTheDocument();
+    expect(screen.getByText('1')).toBeInTheDocument();
+    expect(screen.getByText('2')).toBeInTheDocument();
     expect(screen.getByText('1m 05s')).toBeInTheDocument();
     expect(screen.getByText('30s')).toBeInTheDocument();
     expect(screen.getByText('Page 1 of 1 · 2 entries')).toBeInTheDocument();

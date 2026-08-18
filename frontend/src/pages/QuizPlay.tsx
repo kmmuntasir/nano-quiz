@@ -152,8 +152,8 @@ export default function QuizPlay() {
   return (
     <div className="flex min-h-screen flex-col bg-brand-50 font-sans dark:bg-slate-950">
       <TopBar />
-      <main className="flex flex-1 flex-col items-center p-page">
-        <div className="flex w-full max-w-md flex-col gap-4">
+      <main className="flex flex-1 flex-col items-center justify-center p-page">
+        <div className="flex w-full max-w-md flex-col gap-4 md:max-w-lg lg:max-w-xl">
           {submitState === 'submitting' && (
             <section className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
               <p
@@ -201,7 +201,7 @@ export default function QuizPlay() {
 
           {submitState === 'idle' && error === null && isLoading && (
             <div
-              className="h-48 animate-pulse rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
+              className="h-48 animate-pulse rounded-lg border border-slate-200 bg-white md:h-56 dark:border-slate-800 dark:bg-slate-900"
               aria-busy="true"
               aria-label="Loading question"
             />
@@ -209,7 +209,9 @@ export default function QuizPlay() {
 
           {submitState === 'idle' && error === null && question !== null && (
             <>
-              <TimerCountdown remaining={remaining} />
+              <div className="flex w-full items-center justify-end">
+                <TimerCountdown remaining={remaining} />
+              </div>
               <QuestionDisplay question={question} onAnswer={handleAnswer} />
             </>
           )}
