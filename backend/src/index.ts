@@ -8,6 +8,7 @@ import { config } from './config.js';
 import { db } from './db/index.js';
 import { authRouter } from './routes/auth.js';
 import { healthRouter } from './routes/health.js';
+import { quizzesRouter } from './routes/quizzes.js';
 import { logger } from './utils/logger.js';
 
 const KNOWN_STATUS_BY_ERROR_CODE: Readonly<Record<string, number>> = {
@@ -43,6 +44,7 @@ app.use(cors({ origin: config.frontendUrl }));
 app.use(express.json());
 
 app.use('/api/auth', authRouter);
+app.use('/api/quizzes', quizzesRouter);
 app.use('/health', healthRouter);
 
 // Unmounted routes → envelope-shaped 404.
