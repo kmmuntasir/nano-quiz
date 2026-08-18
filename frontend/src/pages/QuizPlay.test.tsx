@@ -12,6 +12,9 @@ const SESSION: QuizSession = {
   timeLimitSeconds: 15,
 };
 
+const SHORT_SESSION: QuizSession = { ...SESSION, timeLimitSeconds: 2 };
+const SHORT_TIME_LIMIT_MS = SHORT_SESSION.timeLimitSeconds * 1000;
+
 const QUESTIONS = [
   { seq: 1, total: 2, text: 'First question?', options: ['A1', 'B1', 'C1'] },
   { seq: 2, total: 2, text: 'Second question?', options: ['A2', 'B2', 'C2'] },
@@ -60,6 +63,11 @@ function renderAt(path: string, state: unknown): void {
 function renderPlay(): void {
   stubQuestions();
   renderAt('/quizzes/q-live/play', { usr: { session: SESSION }, key: 'test', idx: 0 });
+}
+
+function renderShortPlay(): void {
+  stubQuestions();
+  renderAt('/quizzes/q-live/play', { usr: { session: SHORT_SESSION }, key: 'test', idx: 0 });
 }
 
 describe('QuizPlay', () => {
@@ -198,5 +206,120 @@ describe('QuizPlay', () => {
     await user.click(screen.getByRole('button', { name: 'Retry' }));
 
     expect(await screen.findByRole('heading', { name: QUESTIONS[0].text })).toBeInTheDocument();
+  });
+
+  describe('timer', () => {
+    it('should_show_countdown_while_question_displayed', async () => {
+      renderPlay();
+
+      expect(await screen.findByRole('timer')).toHaveTextContent('15s');
+    });
+
+    it('should_advance_to_next_question_when_question_times_out', async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      renderShortPlay();
+
+      await screen.findByRole('heading', { name: QUESTIONS[0].text });
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(SHORT_TIME_LIMIT_MS);
+      });
+
+      expect(await screen.findByRole('heading', { name: QUESTIONS[1].text })).toBeInTheDocument();
+      expect(screen.getByText('2 of 2')).toBeInTheDocument();
+      expect(screen.queryByRole('heading', { name: QUESTIONS[0].text })).not.toBeInTheDocument();
+    });
+
+    it('should_submit_with_timeout_sentinel_when_last_question_times_out', async () => {
+      const payloads = stubSubmit();
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      renderShortPlay();
+
+      await screen.findByRole('heading', { name: QUESTIONS[0].text });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(SHORT_TIME_LIMIT_MS);
+      });
+      await screen.findByRole('heading', { name: QUESTIONS[1].text });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(SHORT_TIME_LIMIT_MS);
+      });
+
+      expect(await screen.findByText('Quiz complete')).toBeInTheDocument();
+      expect(payloads).toHaveLength(1);
+      expect(payloads[0].answers).toEqual([-1, -1]);
+      expect(payloads[0].answers).toHaveLength(SHORT_SESSION.questionCount);
+    });
+
+    it('should_not_fire_timeout_after_answer_advances_question', async () => {
+      const payloads = stubSubmit();
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      renderShortPlay();
+
+      await user.click(await screen.findByRole('button', { name: 'A1' }));
+      expect(await screen.findByRole('heading', { name: QUESTIONS[1].text })).toBeInTheDocument();
+      expect(screen.getByRole('timer')).toHaveTextContent('2s');
+
+      // Elapse most (but not all) of the second question's window: no timeout
+      // may fire from the first question's canceled countdown.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(SHORT_TIME_LIMIT_MS - 200);
+      });
+
+      expect(screen.getByRole('heading', { name: QUESTIONS[1].text })).toBeInTheDocument();
+
+      await user.click(screen.getByRole('button', { name: 'B2' }));
+
+      expect(await screen.findByText('Quiz complete')).toBeInTheDocument();
+      expect(payloads[0].answers).toEqual([0, 1]);
+    });
+
+    it('should_not_run_timer_while_submit_retry_pending', async () => {
+      let attempts = 0;
+      server.use(
+        http.post(`/api/quizzes/${SESSION.quizId}/submit`, () => {
+          attempts += 1;
+          return HttpResponse.error();
+        }),
+      );
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      renderShortPlay();
+
+      await screen.findByRole('heading', { name: QUESTIONS[0].text });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(SHORT_TIME_LIMIT_MS);
+      });
+      await screen.findByRole('heading', { name: QUESTIONS[1].text });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(SHORT_TIME_LIMIT_MS);
+      });
+      // Last-question timeout triggers the submit retry loop; the timer must
+      // go inert (submitting) instead of firing again or advancing.
+      await act(async () => {
+        await vi.runAllTimersAsync();
+      });
+
+      expect(attempts).toBe(4); // initial + 3 retries, no extra submit from the timer
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        'We could not save your result. Please retry.',
+      );
+      expect(screen.queryByRole('timer')).not.toBeInTheDocument();
+    });
+
+    it('should_submit_normalized_sparse_answers_when_timeout_and_answer_mixed', async () => {
+      const payloads = stubSubmit();
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      renderShortPlay();
+
+      await screen.findByRole('heading', { name: QUESTIONS[0].text });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(SHORT_TIME_LIMIT_MS);
+      });
+      await user.click(await screen.findByRole('button', { name: 'C2' }));
+
+      expect(await screen.findByText('Quiz complete')).toBeInTheDocument();
+      expect(payloads[0].answers).toEqual([-1, 2]);
+    });
   });
 });

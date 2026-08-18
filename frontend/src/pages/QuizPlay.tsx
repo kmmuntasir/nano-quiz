@@ -3,10 +3,13 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { ApiError, fetchQuestion, submitQuiz } from '../api/client';
 import type { Question, QuizSession, SubmitResult } from '../api/types';
 import QuestionDisplay from '../components/QuestionDisplay';
+import TimerCountdown from '../components/TimerCountdown';
 import TopBar from '../components/TopBar';
+import { useQuizTimer } from '../hooks/useQuizTimer';
 
 const SUBMIT_MAX_RETRIES = 3;
 const SUBMIT_RETRY_DELAY_MS = 1000;
+const TIMEOUT_SENTINEL = -1;
 const GENERIC_ERROR_MESSAGE = 'Something went wrong. Please try again.';
 const SUBMIT_FAILED_MESSAGE = 'We could not save your result. Please retry.';
 
@@ -63,9 +66,15 @@ export default function QuizPlay() {
         return;
       }
       setSubmitState('submitting');
+      // JSON.stringify drops sparse holes, which would fail the server-side
+      // length check — normalize unanswered positions to the timeout sentinel.
+      const answersPayload = Array.from(
+        { length: session.questionCount },
+        (_, i) => finalAnswers[i] ?? TIMEOUT_SENTINEL,
+      );
       const payload = {
         seed: session.seed,
-        answers: finalAnswers,
+        answers: answersPayload,
         elapsedMs: Date.now() - startedAt.current,
       };
       for (let attempt = 0; attempt <= SUBMIT_MAX_RETRIES; attempt += 1) {
@@ -108,6 +117,30 @@ export default function QuizPlay() {
     [answers, doSubmit, seq, session, submitState],
   );
 
+  const handleTimeout = useCallback(() => {
+    if (session === undefined || submitState !== 'idle' || result !== null) {
+      return;
+    }
+    const nextAnswers = [...answers];
+    nextAnswers[seq - 1] = TIMEOUT_SENTINEL;
+    setAnswers(nextAnswers);
+
+    if (seq < session.questionCount) {
+      setSeq(seq + 1);
+      setQuestion(null);
+      setError(null);
+      return;
+    }
+    void doSubmit(nextAnswers);
+  }, [answers, doSubmit, result, seq, session, submitState]);
+
+  const { remaining } = useQuizTimer({
+    seconds: session?.timeLimitSeconds ?? 0,
+    active: submitState === 'idle' && result === null,
+    resetKey: seq,
+    onTimeout: handleTimeout,
+  });
+
   if (!session) {
     return <Navigate to="/" replace />;
   }
@@ -132,7 +165,14 @@ export default function QuizPlay() {
 
           {result === null && submitState === 'submitting' && (
             <section className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
-              <p className="text-sm text-slate-600 dark:text-slate-400" aria-busy="true">
+              <p
+                className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400"
+                aria-busy="true"
+              >
+                <span
+                  aria-hidden="true"
+                  className="inline-block size-4 animate-spin rounded-full border-2 border-slate-300 border-t-brand-500"
+                />
                 Submitting…
               </p>
             </section>
@@ -177,7 +217,10 @@ export default function QuizPlay() {
           )}
 
           {result === null && submitState === 'idle' && error === null && question !== null && (
-            <QuestionDisplay question={question} onAnswer={handleAnswer} />
+            <>
+              <TimerCountdown remaining={remaining} />
+              <QuestionDisplay question={question} onAnswer={handleAnswer} />
+            </>
           )}
         </div>
       </main>
