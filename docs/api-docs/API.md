@@ -103,6 +103,8 @@ Fetch one question by 1-based sequence. The `seed` (from start) is required.
 
 **Never includes `correct_opt` or any answer key.**
 
+**Errors** `400` missing/empty seed or non-integer `seq` · `404` quiz not found / `seq` outside `1..questionCount` · `403` malformed seed (not 10-hex). No active-window gate — in-flight attempts continue past `endAt`.
+
 ### `POST /api/quizzes/:id/submit`
 
 Final submit. Persists the participation (single, permanent) and scores server-side.
@@ -133,7 +135,7 @@ Final submit. Persists the participation (single, permanent) and scores server-s
 
 Correct answers are never returned. The submit is idempotent for a given user+quiz (a completed quiz returns the stored result).
 
-**Errors** `403` quiz not active / missing seed · `409` already participated (returns the existing result).
+**Errors** `400` missing seed / invalid `answers` or `elapsedMs` · `404` quiz not found · `403` malformed seed (not 10-hex). No active-window gate — in-flight submits land past `endAt`. A repeat submit is idempotent (`200` with the stored result); `409` already-participated applies to a second `start`, not submit.
 
 ### `GET /api/quizzes/:id/leaderboard?page=1&pageSize=20`
 
