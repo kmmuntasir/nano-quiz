@@ -171,6 +171,40 @@ const selectParticipationStmt = db.prepare<ParticipationParams, ParticipationRow
    WHERE user_id = @userId AND quiz_id = @quizId`,
 );
 
+export interface LeaderboardEntryRow {
+  name: string;
+  score: number;
+  durationMs: number;
+}
+
+interface LeaderboardParams {
+  quizId: string;
+  limit: number;
+  offset: number;
+}
+
+const selectLeaderboardStmt = db.prepare<LeaderboardParams, LeaderboardEntryRow>(
+  `SELECT
+     users.name,
+     participations.score,
+     participations.duration_ms AS durationMs
+   FROM participations
+   JOIN users ON users.id = participations.user_id
+   WHERE participations.quiz_id = @quizId
+   ORDER BY participations.score DESC, participations.duration_ms ASC
+   LIMIT @limit OFFSET @offset`,
+);
+
+interface TotalRow {
+  total: number;
+}
+
+const countLeaderboardStmt = db.prepare<QuizIdParam, TotalRow>(
+  `SELECT COUNT(*) AS total
+   FROM participations
+   WHERE quiz_id = @quizId`,
+);
+
 export const quizzes = {
   listForUser(userId: string, now: string): QuizListRow[] {
     return selectQuizzesForUserStmt.all({ userId, now });
@@ -207,5 +241,13 @@ export const quizzes = {
 
   getParticipation(userId: string, quizId: string): ParticipationRow | undefined {
     return selectParticipationStmt.get({ userId, quizId });
+  },
+
+  listLeaderboard(quizId: string, limit: number, offset: number): LeaderboardEntryRow[] {
+    return selectLeaderboardStmt.all({ quizId, limit, offset });
+  },
+
+  countLeaderboard(quizId: string): number {
+    return countLeaderboardStmt.get({ quizId })!.total;
   },
 };
