@@ -6,6 +6,7 @@ import type { NextFunction, Request, Response } from 'express';
 import type { Server } from 'node:http';
 import { config } from './config.js';
 import { db } from './db/index.js';
+import { adminQuizzesRouter } from './routes/admin/quizzes.js';
 import { authRouter } from './routes/auth.js';
 import { healthRouter } from './routes/health.js';
 import { quizzesRouter } from './routes/quizzes.js';
@@ -44,6 +45,7 @@ app.disable('x-powered-by');
 app.use(cors({ origin: config.frontendUrl }));
 app.use(express.json());
 
+app.use('/api/admin/quizzes', adminQuizzesRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/quizzes', quizzesRouter);
 app.use('/api/quizzes', leaderboardRouter);
