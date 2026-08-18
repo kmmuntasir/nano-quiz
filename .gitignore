@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+
+# Environment
+.env
+.env.local
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# AI generated (keep directory, ignore contents)
+docs/ai_generated/*
+!docs/ai_generated/
+!docs/ai_generated/.gitkeep
+
+# PM cycle state
+.context/
+
+# Playwright MCP
+.playwright-mcp/
+
+# Husky artifacts in sub-packages (root manages hooks)
+backend/.husky/
