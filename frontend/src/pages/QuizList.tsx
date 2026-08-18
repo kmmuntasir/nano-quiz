@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ApiError, fetchQuizzes } from '../api/client';
-import type { Quiz } from '../api/types';
+import type { Quiz, QuizSession } from '../api/types';
 import TopBar from '../components/TopBar';
 import QuizCard from '../components/QuizCard';
 
@@ -10,6 +11,7 @@ export default function QuizList() {
   const [quizzes, setQuizzes] = useState<Quiz[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  const navigate = useNavigate();
 
   const load = useCallback(async () => {
     try {
@@ -22,6 +24,18 @@ export default function QuizList() {
       );
     }
   }, []);
+
+  const handleStarted = useCallback(
+    (session: QuizSession) => {
+      void navigate(`/quizzes/${session.quizId}/play`, { state: { session } });
+    },
+    [navigate],
+  );
+
+  const handleStartError = useCallback(() => {
+    // Refresh so stale canStart flags (e.g. already participated) correct after a failed start.
+    void load();
+  }, [load]);
 
   useEffect(() => {
     // Data fetch on mount/re-entry; setState happens async after the request resolves.
@@ -75,7 +89,7 @@ export default function QuizList() {
             <ul className="flex flex-col gap-4">
               {quizzes.map((quiz) => (
                 <li key={quiz.id}>
-                  <QuizCard quiz={quiz} />
+                  <QuizCard quiz={quiz} onStarted={handleStarted} onStartError={handleStartError} />
                 </li>
               ))}
             </ul>

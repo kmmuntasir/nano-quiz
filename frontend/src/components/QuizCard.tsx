@@ -1,9 +1,11 @@
-import type { Quiz } from '../api/types';
+import type { Quiz, QuizSession } from '../api/types';
 import StartQuizButton from './StartQuizButton';
 
 export interface QuizCardProps {
   quiz: Quiz;
   now?: Date;
+  onStarted?: (session: QuizSession) => void;
+  onStartError?: () => void;
 }
 
 type QuizStatus = 'live' | 'upcoming' | 'ended';
@@ -35,7 +37,12 @@ function formatWindow(startAt: string, endAt: string): string {
   return `${format.format(new Date(startAt))} – ${format.format(new Date(endAt))}`;
 }
 
-export default function QuizCard({ quiz, now = new Date() }: QuizCardProps) {
+export default function QuizCard({
+  quiz,
+  now = new Date(),
+  onStarted,
+  onStartError,
+}: QuizCardProps) {
   const status = deriveStatus(quiz.startAt, quiz.endAt, now);
 
   return (
@@ -60,7 +67,7 @@ export default function QuizCard({ quiz, now = new Date() }: QuizCardProps) {
           You scored {quiz.userScore ?? 0}/{quiz.questionCount}
         </p>
       )}
-      <StartQuizButton quiz={quiz} now={now} />
+      <StartQuizButton quiz={quiz} now={now} onStarted={onStarted} onStartError={onStartError} />
     </article>
   );
 }

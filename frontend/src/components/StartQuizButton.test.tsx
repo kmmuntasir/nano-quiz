@@ -1,9 +1,9 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { http } from 'msw';
+import { http, HttpResponse } from 'msw';
 import { vi } from 'vitest';
 import StartQuizButton from './StartQuizButton';
-import type { Quiz } from '../api/types';
+import type { Quiz, QuizSession } from '../api/types';
 import { server } from '../test/server';
 
 const NOW = new Date('2026-08-18T12:00:00Z');
@@ -91,17 +91,43 @@ describe('StartQuizButton', () => {
     expect(screen.getByText('Ended Aug 15')).toBeInTheDocument();
   });
 
-  it('should_show_next_release_notice_and_fire_no_request_when_clicked', async () => {
-    const onStartRequest = vi.fn();
-    server.use(http.post('/api/quizzes/:id/start', onStartRequest));
+  it('should_call_onStarted_with_session_when_start_succeeds', async () => {
+    const session: QuizSession = {
+      seed: 'seed-1',
+      quizId: 'q1',
+      questionCount: 10,
+      timeLimitSeconds: 15,
+    };
+    server.use(
+      http.post('/api/quizzes/q1/start', () => HttpResponse.json(session)),
+    );
+    const onStarted = vi.fn();
     const user = userEvent.setup();
-    render(<StartQuizButton quiz={buildQuiz()} now={NOW} />);
+    render(<StartQuizButton quiz={buildQuiz()} now={NOW} onStarted={onStarted} />);
 
     await user.click(screen.getByRole('button', { name: 'Start quiz' }));
 
-    expect(
-      screen.getByText('Quiz taking is coming in the next release'),
-    ).toBeInTheDocument();
-    expect(onStartRequest).not.toHaveBeenCalled();
+    expect(onStarted).toHaveBeenCalledWith(session);
+    expect(screen.getByRole('button', { name: 'Start quiz' })).toBeEnabled();
+  });
+
+  it('should_show_error_and_disable_when_start_returns_409', async () => {
+    server.use(
+      http.post('/api/quizzes/q1/start', () =>
+        HttpResponse.json(
+          { error: 'ALREADY_PARTICIPATED', message: 'You have already taken this quiz.' },
+          { status: 409 },
+        ),
+      ),
+    );
+    const onStarted = vi.fn();
+    const user = userEvent.setup();
+    render(<StartQuizButton quiz={buildQuiz()} now={NOW} onStarted={onStarted} />);
+
+    await user.click(screen.getByRole('button', { name: 'Start quiz' }));
+
+    expect(onStarted).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert')).toHaveTextContent('You have already taken this quiz.');
+    expect(screen.getByRole('button', { name: 'Start quiz' })).toBeDisabled();
   });
 });
