@@ -74,6 +74,8 @@ List all quizzes for the signed-in user. Every quiz is shown; inactive ones expo
 
 `canStart` is `true` only when now is within `[startAt, endAt]` and the user has not participated. `userScore` is the user's score if they already participated.
 
+**Admin preview:** when the JWT carries `isAdmin: true`, `canStart` is `true` whenever the question bank has at least `questionCount` questions — the active window and participation are ignored (admins can preview ended and upcoming quizzes, repeatedly). `participated`/`userScore` stay truthful and are normally `false`/`null` since admin previews never record a participation.
+
 ### `POST /api/quizzes/:id/start`
 
 Start the quiz. Returns a random `seed` from which the server deterministically derives the contestant's shuffled question order. **Nothing is persisted** — no record until the final submit.
@@ -85,6 +87,8 @@ Start the quiz. Returns a random `seed` from which the server deterministically 
 ```
 
 **Errors** `403` quiz not currently active · `409` user already participated.
+
+**Admin preview:** admins (`isAdmin: true`) may start any quiz any number of times — ended or upcoming — skipping the window and participation checks. `409 INSUFFICIENT_QUESTIONS` (bank smaller than `questionCount`) still applies to everyone.
 
 ### `GET /api/quizzes/:id/question/:seq?seed=...`
 
@@ -134,6 +138,8 @@ Final submit. Persists the participation (single, permanent) and scores server-s
 ```
 
 Correct answers are never returned. The submit is idempotent for a given user+quiz (a completed quiz returns the stored result).
+
+**Admin preview:** an admin's submit runs the same validation and server-side scoring but writes **no participation row** — the response carries `participated: false`, there is no idempotency check (each submit scores fresh), and the attempt never appears on leaderboards or in attempt counts.
 
 **Errors** `400` missing seed / invalid `answers` or `elapsedMs` · `404` quiz not found · `403` malformed seed (not 10-hex). No active-window gate — in-flight submits land past `endAt`. A repeat submit is idempotent (`200` with the stored result); `409` already-participated applies to a second `start`, not submit.
 

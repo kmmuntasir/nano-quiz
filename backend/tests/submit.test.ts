@@ -6,6 +6,7 @@ import { db } from '../src/db/index.js';
 import { deriveQuestionOrder } from '../src/utils/shuffle.js';
 
 const USER_ID = 'user-submit-1';
+const ADMIN_ID = 'admin-submit-1';
 
 const HOUR_MS = 60 * 60_000;
 
@@ -73,6 +74,17 @@ function token(): string {
   return jwt.sign({ userId: USER_ID, isAdmin: false }, 'test-jwt-secret', { expiresIn: '2h' });
 }
 
+function adminToken(): string {
+  return jwt.sign({ userId: ADMIN_ID, isAdmin: true }, 'test-jwt-secret', { expiresIn: '2h' });
+}
+
+function adminSubmit(quizId: string, body: unknown): request.Test {
+  return request(app)
+    .post(`/api/quizzes/${quizId}/submit`)
+    .set('Authorization', `Bearer ${adminToken()}`)
+    .send(body);
+}
+
 function authedCall(method: 'post' | 'get', url: string, body?: unknown): request.Test {
   const req = request(app)[method](url).set('Authorization', `Bearer ${token()}`);
   if (body !== undefined) {
@@ -98,6 +110,7 @@ function wrongAnswers(): number[] {
 
 beforeAll(() => {
   insertUserStmt.run(USER_ID, 'submitter@nanoquiz.app', 'Submitter', 'sub-submitter');
+  insertUserStmt.run(ADMIN_ID, 'admin-submitter@nanoquiz.app', 'Admin Submitter', 'sub-admin-submitter');
 });
 
 beforeEach(() => {
@@ -327,5 +340,73 @@ describe('POST /api/quizzes/:id/submit', () => {
 
     expect(res.status).toBe(401);
     expect(res.body.error).toBe('UNAUTHORIZED');
+  });
+
+  it('should_score_without_persisting_when_admin_submits', async () => {
+    insertQuiz({ id: 'q-admin-preview' });
+
+    const res = await adminSubmit('q-admin-preview', {
+      seed: SEED,
+      answers: correctAnswers(),
+      elapsedMs: 8_000,
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body.score).toBe(QUESTION_COUNT);
+    expect(res.body.correctCount).toBe(QUESTION_COUNT);
+    expect(res.body.totalQuestions).toBe(QUESTION_COUNT);
+    expect(res.body.durationMs).toBe(8_000);
+    expect(res.body.participated).toBe(false);
+    expect(countParticipationsStmt.get(ADMIN_ID, 'q-admin-preview')).toEqual({ count: 0 });
+  });
+
+  it('should_rescore_freshly_when_admin_submits_repeatedly', async () => {
+    insertQuiz({ id: 'q-admin-repeat' });
+
+    const first = await adminSubmit('q-admin-repeat', {
+      seed: SEED,
+      answers: correctAnswers(),
+      elapsedMs: 1_000,
+    });
+    const second = await adminSubmit('q-admin-repeat', {
+      seed: SEED,
+      answers: wrongAnswers(),
+      elapsedMs: 2_000,
+    });
+
+    expect(first.status).toBe(200);
+    expect(first.body.score).toBe(QUESTION_COUNT);
+    expect(second.status).toBe(200);
+    expect(second.body.score).toBe(0); // no idempotency: fresh re-scoring
+    expect(second.body.participated).toBe(false);
+    expect(countParticipationsStmt.get(ADMIN_ID, 'q-admin-repeat')).toEqual({ count: 0 });
+  });
+
+  it('should_not_appear_on_leaderboard_when_admin_submits', async () => {
+    insertQuiz({ id: 'q-admin-board' });
+
+    await adminSubmit('q-admin-board', { seed: SEED, answers: correctAnswers(), elapsedMs: 1_000 });
+
+    const row = db
+      .prepare('SELECT COUNT(*) AS total FROM participations WHERE quiz_id = ?')
+      .get('q-admin-board') as { total: number };
+    expect(row.total).toBe(0);
+  });
+
+  it('should_persist_when_non_admin_submits_after_admin_previewed_same_quiz', async () => {
+    insertQuiz({ id: 'q-mixed-roles' });
+
+    const admin = await adminSubmit('q-mixed-roles', {
+      seed: SEED,
+      answers: correctAnswers(),
+      elapsedMs: 1_000,
+    });
+    const user = await submit('q-mixed-roles', { seed: SEED, answers: correctAnswers(), elapsedMs: 2_000 });
+
+    expect(admin.body.participated).toBe(false);
+    expect(user.status).toBe(200);
+    expect(user.body.participated).toBe(true);
+    expect(countParticipationsStmt.get(USER_ID, 'q-mixed-roles')).toEqual({ count: 1 });
+    expect(countParticipationsStmt.get(ADMIN_ID, 'q-mixed-roles')).toEqual({ count: 0 });
   });
 });

@@ -6,6 +6,7 @@ import { db } from '../src/db/index.js';
 import { deriveQuestionOrder } from '../src/utils/shuffle.js';
 
 const USER_ID = 'user-quiz-list-1';
+const ADMIN_ID = 'admin-quiz-list-1';
 
 const HOUR_MS = 60 * 60_000;
 const DAY_MS = 24 * HOUR_MS;
@@ -60,8 +61,16 @@ function authedGet(url: string): request.Test {
   return request(app).get(url).set('Authorization', `Bearer ${token}`);
 }
 
+function adminGet(url: string): request.Test {
+  const token = jwt.sign({ userId: ADMIN_ID, isAdmin: true }, 'test-jwt-secret', {
+    expiresIn: '2h',
+  });
+  return request(app).get(url).set('Authorization', `Bearer ${token}`);
+}
+
 beforeAll(() => {
   insertUserStmt.run(USER_ID, 'quiz-lister@nanoquiz.app', 'Quiz Lister', 'sub-quiz-lister');
+  insertUserStmt.run(ADMIN_ID, 'admin-lister@nanoquiz.app', 'Admin Lister', 'sub-admin-lister');
 });
 
 beforeEach(() => {
@@ -194,6 +203,46 @@ describe('GET /api/quizzes', () => {
         'userScore',
       ].sort(),
     );
+  });
+
+  it('should_return_can_start_true_for_ended_and_upcoming_when_admin_lists', async () => {
+    // insertQuizWithBank has fixed question IDs (single-use), so build the banks inline.
+    insertQuiz({ id: 'q-admin-ended', title: 'Admin Ended', startOffsetMs: -2 * HOUR_MS, endOffsetMs: -HOUR_MS });
+    insertQuiz({ id: 'q-admin-upcoming', title: 'Admin Upcoming', startOffsetMs: HOUR_MS, endOffsetMs: 2 * HOUR_MS });
+    for (const quizId of ['q-admin-ended', 'q-admin-upcoming']) {
+      insertQuestionStmt.run(`${quizId}-q1`, quizId, 1, 'Prompt 1?', '["A","B"]', 0);
+      insertQuestionStmt.run(`${quizId}-q2`, quizId, 2, 'Prompt 2?', '["A","B"]', 1);
+      insertQuestionStmt.run(`${quizId}-q3`, quizId, 3, 'Prompt 3?', '["A","B","C"]', 2);
+    }
+
+    const res = await adminGet('/api/quizzes');
+
+    expect(res.status).toBe(200);
+    const ended = res.body.find((q: { id: string }) => q.id === 'q-admin-ended');
+    const upcoming = res.body.find((q: { id: string }) => q.id === 'q-admin-upcoming');
+    expect(ended.canStart).toBe(true);
+    expect(upcoming.canStart).toBe(true);
+  });
+
+  it('should_return_can_start_false_when_admin_lists_quiz_with_insufficient_bank', async () => {
+    // insertQuiz leaves the bank empty while questionCount is 3.
+    insertQuiz({ id: 'q-admin-thin', title: 'Admin Thin', startOffsetMs: -HOUR_MS, endOffsetMs: HOUR_MS });
+
+    const res = await adminGet('/api/quizzes');
+
+    expect(res.status).toBe(200);
+    const thin = res.body.find((q: { id: string }) => q.id === 'q-admin-thin');
+    expect(thin.canStart).toBe(false);
+  });
+
+  it('should_return_can_start_false_for_ended_quiz_when_non_admin_lists', async () => {
+    insertQuizWithBank({ id: 'q-user-ended', startOffsetMs: -2 * HOUR_MS, endOffsetMs: -HOUR_MS });
+
+    const res = await authedGet('/api/quizzes');
+
+    expect(res.status).toBe(200);
+    const ended = res.body.find((q: { id: string }) => q.id === 'q-user-ended');
+    expect(ended.canStart).toBe(false);
   });
 });
 

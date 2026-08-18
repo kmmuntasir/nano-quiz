@@ -22,9 +22,13 @@ interface QuizListItem {
   userScore: number | null;
 }
 
-function toListItem(row: QuizListRow, now: string): QuizListItem {
+function toListItem(row: QuizListRow, now: string, isAdmin: boolean): QuizListItem {
   const participated = row.userScore !== null;
   const isWithinWindow = row.startAt <= now && row.endAt >= now;
+  // Admins preview quizzes freely: only a sufficient question bank gates canStart.
+  const canStart = isAdmin
+    ? row.questionBankSize >= row.questionCount
+    : isWithinWindow && !participated;
   return {
     id: row.id,
     title: row.title,
@@ -33,7 +37,7 @@ function toListItem(row: QuizListRow, now: string): QuizListItem {
     timeLimitSeconds: row.timeLimitSeconds,
     startAt: row.startAt,
     endAt: row.endAt,
-    canStart: isWithinWindow && !participated,
+    canStart,
     participated,
     userScore: row.userScore,
   };
@@ -43,7 +47,7 @@ function listQuizzes(req: Request, res: Response): void {
   // Server clock, ISO-UTC — lexically comparable with stored ISO-8601 Z timestamps.
   const now = new Date().toISOString();
   const rows = quizzes.listForUser(req.userId!, now);
-  res.status(200).json(rows.map((row) => toListItem(row, now)));
+  res.status(200).json(rows.map((row) => toListItem(row, now, req.isAdmin === true)));
 }
 
 function startQuiz(req: Request, res: Response): void {
@@ -55,21 +59,24 @@ function startQuiz(req: Request, res: Response): void {
     return;
   }
 
-  // Same lexical ISO-UTC comparison as toListItem's canStart window check.
-  const now = new Date().toISOString();
-  const isWithinWindow = quiz.startAt <= now && quiz.endAt >= now;
-  if (!isWithinWindow) {
-    res
-      .status(403)
-      .json({ error: 'QUIZ_NOT_ACTIVE', message: 'This quiz is not currently active.' });
-    return;
-  }
+  // Admins skip the window + participation guards (unlimited preview).
+  if (req.isAdmin !== true) {
+    // Same lexical ISO-UTC comparison as toListItem's canStart window check.
+    const now = new Date().toISOString();
+    const isWithinWindow = quiz.startAt <= now && quiz.endAt >= now;
+    if (!isWithinWindow) {
+      res
+        .status(403)
+        .json({ error: 'QUIZ_NOT_ACTIVE', message: 'This quiz is not currently active.' });
+      return;
+    }
 
-  if (quizzes.hasParticipation(req.userId!, quiz.id)) {
-    res
-      .status(409)
-      .json({ error: 'ALREADY_PARTICIPATED', message: 'You have already taken this quiz.' });
-    return;
+    if (quizzes.hasParticipation(req.userId!, quiz.id)) {
+      res
+        .status(409)
+        .json({ error: 'ALREADY_PARTICIPATED', message: 'You have already taken this quiz.' });
+      return;
+    }
   }
 
   if (quizzes.countQuestions(quiz.id) < quiz.questionCount) {
@@ -166,7 +173,23 @@ interface SubmitScoreResult {
   totalQuestions: number;
   correctCount: number;
   durationMs: number;
-  participated: true;
+  participated: boolean;
+}
+
+// Pure scoring: compares answers against the seed-derived order. Shared by the
+// persisted (user) and preview (admin) submit paths.
+function scoreAnswers(quiz: QuizRow, order: string[], answers: number[]): number {
+  let correctCount = 0;
+  for (let i = 0; i < order.length; i++) {
+    const question = quizzes.getQuestionById(quiz.id, order[i]);
+    if (question === undefined) {
+      throw new Error(`Question missing during scoring: quizId=${quiz.id}`);
+    }
+    if (answers[i] === question.correctOpt) {
+      correctCount++;
+    }
+  }
+  return correctCount;
 }
 
 // Scores answers against the seed-derived order inside a single transaction.
@@ -182,16 +205,7 @@ interface ScoreAndStoreArgs {
 
 const scoreAndStore = db.transaction(
   ({ userId, quiz, order, answers, elapsedMs }: ScoreAndStoreArgs): SubmitScoreResult => {
-    let correctCount = 0;
-    for (let i = 0; i < order.length; i++) {
-      const question = quizzes.getQuestionById(quiz.id, order[i]);
-      if (question === undefined) {
-        throw new Error(`Question missing during scoring: quizId=${quiz.id}`);
-      }
-      if (answers[i] === question.correctOpt) {
-        correctCount++;
-      }
-    }
+    const correctCount = scoreAnswers(quiz, order, answers);
     quizzes.insertParticipation(userId, quiz.id, correctCount, elapsedMs);
     return {
       score: correctCount,
@@ -271,6 +285,19 @@ function submitQuiz(req: Request, res: Response): void {
   }
 
   // Deliberately NO active-window gate: in-flight submits land past end_at.
+
+  // Admin preview: score in-memory, persist nothing, no idempotency check.
+  if (req.isAdmin === true) {
+    const correctCount = scoreAnswers(quiz, order, answers as number[]);
+    res.status(200).json({
+      score: correctCount,
+      totalQuestions: quiz.questionCount,
+      correctCount,
+      durationMs: elapsedMs as number,
+      participated: false,
+    });
+    return;
+  }
 
   const existing = quizzes.getParticipation(req.userId!, quiz.id);
   if (existing) {

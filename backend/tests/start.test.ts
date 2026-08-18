@@ -5,6 +5,7 @@ import { app } from '../src/index.js';
 import { db } from '../src/db/index.js';
 
 const USER_ID = 'user-quiz-start-1';
+const ADMIN_ID = 'admin-quiz-start-1';
 
 const HOUR_MS = 60 * 60_000;
 
@@ -80,6 +81,13 @@ function authedGet(url: string): request.Test {
   return request(app).get(url).set('Authorization', `Bearer ${token}`);
 }
 
+function adminPost(url: string): request.Test {
+  const token = jwt.sign({ userId: ADMIN_ID, isAdmin: true }, 'test-jwt-secret', {
+    expiresIn: '2h',
+  });
+  return request(app).post(url).set('Authorization', `Bearer ${token}`);
+}
+
 function participationCount(quizId: string): number {
   const row = db
     .prepare('SELECT COUNT(*) AS n FROM participations WHERE user_id = ? AND quiz_id = ?')
@@ -93,6 +101,7 @@ function tableCount(table: string): number {
 
 beforeAll(() => {
   insertUserStmt.run(USER_ID, 'quiz-starter@nanoquiz.app', 'Quiz Starter', 'sub-quiz-starter');
+  insertUserStmt.run(ADMIN_ID, 'admin-starter@nanoquiz.app', 'Admin Starter', 'sub-admin-starter');
 });
 
 beforeEach(() => {
@@ -244,5 +253,67 @@ describe('POST /api/quizzes/:id/start', () => {
 
     expect(res.status).toBe(401);
     expect(res.body.error).toBe('UNAUTHORIZED');
+  });
+
+  it('should_return_200_when_admin_starts_ended_quiz', async () => {
+    insertQuiz({ id: 'q-admin-past', startOffsetMs: -2 * HOUR_MS, endOffsetMs: -HOUR_MS });
+
+    const res = await adminPost('/api/quizzes/q-admin-past/start');
+
+    expect(res.status).toBe(200);
+    expect(res.body.quizId).toBe('q-admin-past');
+    expect(res.body.seed).toMatch(/^[0-9a-f]{10}$/);
+  });
+
+  it('should_return_200_when_admin_starts_upcoming_quiz', async () => {
+    insertQuiz({ id: 'q-admin-future', startOffsetMs: HOUR_MS, endOffsetMs: 2 * HOUR_MS });
+
+    const res = await adminPost('/api/quizzes/q-admin-future/start');
+
+    expect(res.status).toBe(200);
+    expect(res.body.quizId).toBe('q-admin-future');
+  });
+
+  it('should_return_200_on_every_start_when_admin_starts_repeatedly', async () => {
+    insertQuiz({ id: 'q-admin-twice', startOffsetMs: -HOUR_MS, endOffsetMs: HOUR_MS });
+    insertParticipationStmt.run(ADMIN_ID, 'q-admin-twice', 2, 30_000);
+
+    const first = await adminPost('/api/quizzes/q-admin-twice/start');
+    const second = await adminPost('/api/quizzes/q-admin-twice/start');
+
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(200);
+  });
+
+  it('should_return_409_when_admin_starts_quiz_with_insufficient_bank', async () => {
+    insertQuiz({ id: 'q-admin-thin', questionCount: 3, startOffsetMs: -HOUR_MS, endOffsetMs: HOUR_MS });
+
+    const res = await adminPost('/api/quizzes/q-admin-thin/start');
+
+    expect(res.status).toBe(409);
+    expect(res.body.error).toBe('INSUFFICIENT_QUESTIONS');
+  });
+
+  it('should_return_403_when_non_admin_starts_same_ended_quiz', async () => {
+    insertQuiz({ id: 'q-regression-past', startOffsetMs: -2 * HOUR_MS, endOffsetMs: -HOUR_MS });
+
+    const res = await authedPost('/api/quizzes/q-regression-past/start');
+
+    expect(res.status).toBe(403);
+    expect(res.body.error).toBe('QUIZ_NOT_ACTIVE');
+  });
+
+  it('should_return_403_when_non_admin_window_check_precedes_bank_check', async () => {
+    insertQuiz({
+      id: 'q-regression-thin-future',
+      questionCount: 3,
+      startOffsetMs: HOUR_MS,
+      endOffsetMs: 2 * HOUR_MS,
+    });
+
+    const res = await authedPost('/api/quizzes/q-regression-thin-future/start');
+
+    expect(res.status).toBe(403);
+    expect(res.body.error).toBe('QUIZ_NOT_ACTIVE');
   });
 });

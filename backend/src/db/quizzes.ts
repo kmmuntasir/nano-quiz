@@ -14,6 +14,8 @@ export interface QuizListRow {
   updatedAt: string;
   /** Score from the caller's participation row; NULL when never taken. */
   userScore: number | null;
+  /** Size of the quiz's question bank — drives admin preview canStart. */
+  questionBankSize: number;
 }
 
 // Single statement — no N+1. Locked ordering via derived rank:
@@ -37,7 +39,8 @@ const selectQuizzesForUserStmt = db.prepare<QuizListParams, QuizListRow>(
      q.end_at AS endAt,
      q.created_at AS createdAt,
      q.updated_at AS updatedAt,
-     p.score AS userScore
+     p.score AS userScore,
+     (SELECT COUNT(*) FROM questions qs WHERE qs.quiz_id = q.id) AS questionBankSize
    FROM quizzes q
    LEFT JOIN participations p
      ON p.quiz_id = q.id AND p.user_id = @userId
