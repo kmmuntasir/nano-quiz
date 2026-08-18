@@ -11,6 +11,13 @@ const SESSION: QuizSession = {
   timeLimitSeconds: 15,
 };
 
+const QUESTION = {
+  seq: 1,
+  total: 10,
+  text: 'What year was the company founded?',
+  options: ['2019', '2020', '2021'],
+};
+
 function renderAt(path: string, state: unknown): void {
   window.history.replaceState(state, '', path);
   seedSession();
@@ -18,12 +25,15 @@ function renderAt(path: string, state: unknown): void {
 }
 
 describe('QuizPlay', () => {
-  it('should_render_session_metadata_when_location_state_carries_session', async () => {
-    // React Router persists location state as { usr, key, idx } in history.state.
+  it('should_render_first_question_when_location_state_carries_session', async () => {
+    server.use(
+      http.get(`/api/quizzes/${SESSION.quizId}/question/1`, () => HttpResponse.json(QUESTION)),
+    );
     renderAt('/quizzes/q-live/play', { usr: { session: SESSION }, key: 'test', idx: 0 });
 
-    expect(await screen.findByRole('heading', { name: 'Quiz started' })).toBeInTheDocument();
-    expect(screen.getByText('10 questions · 15s per question')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: QUESTION.text })).toBeInTheDocument();
+    expect(screen.getByText('1 of 10')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '2020' })).toBeInTheDocument();
   });
 
   it('should_redirect_home_when_location_state_has_no_session', async () => {
@@ -31,6 +41,6 @@ describe('QuizPlay', () => {
     renderAt('/quizzes/q-live/play', null);
 
     expect(await screen.findByText('No quizzes yet')).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'Quiz started' })).not.toBeInTheDocument();
+    expect(screen.queryByText('1 of 10')).not.toBeInTheDocument();
   });
 });

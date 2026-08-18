@@ -137,14 +137,24 @@ describe('QuizList', () => {
           timeLimitSeconds: 15,
         }),
       ),
+      http.get('/api/quizzes/q-live/question/1', () =>
+        HttpResponse.json({
+          seq: 1,
+          total: 10,
+          text: 'What year was the company founded?',
+          options: ['2019', '2020', '2021'],
+        }),
+      ),
     );
     await renderQuizList();
     const user = userEvent.setup();
 
     await user.click(await screen.findByRole('button', { name: 'Start quiz' }));
 
-    expect(await screen.findByRole('heading', { name: 'Quiz started' })).toBeInTheDocument();
-    expect(screen.getByText('10 questions · 15s per question')).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'What year was the company founded?' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('1 of 10')).toBeInTheDocument();
   });
 
   it('should_show_alert_in_list_when_start_returns_409', async () => {
