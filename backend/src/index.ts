@@ -11,6 +11,7 @@ import { authRouter } from './routes/auth.js';
 import { healthRouter } from './routes/health.js';
 import { quizzesRouter } from './routes/quizzes.js';
 import { leaderboardRouter } from './routes/leaderboard.js';
+import { registerStaticFrontend } from './static.js';
 import { logger } from './utils/logger.js';
 
 const KNOWN_STATUS_BY_ERROR_CODE: Readonly<Record<string, number>> = {
@@ -50,6 +51,9 @@ app.use('/api/auth', authRouter);
 app.use('/api/quizzes', quizzesRouter);
 app.use('/api/quizzes', leaderboardRouter);
 app.use('/health', healthRouter);
+
+// Static SPA serving (production) — after API routes, before the JSON 404.
+registerStaticFrontend(app);
 
 // Unmounted routes → envelope-shaped 404.
 app.use((_req: Request, res: Response): void => {
