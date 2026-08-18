@@ -1,0 +1,6 @@
+# Environment — Vite exposes VITE_* vars to the client; never commit real values.
+# Root .gitignore already covers .env / .env.local; this covers .env.* variants.
+# .env.example is the committed template and must stay tracked.
+.env
+.env.*
+!.env.example
