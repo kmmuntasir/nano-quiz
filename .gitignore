@@ -21,9 +21,6 @@ docs/ai_generated/*
 !docs/ai_generated/
 !docs/ai_generated/.gitkeep
 
-# PM cycle state
-.context/
-
 # Playwright MCP
 .playwright-mcp/
 
