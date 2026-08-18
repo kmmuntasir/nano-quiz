@@ -115,8 +115,16 @@ export async function fetchQuestion(quizId: string, seq: number, seed: string): 
   return data;
 }
 
-export async function fetchLeaderboard(quizId: string): Promise<LeaderboardData> {
-  const { data } = await apiClient.get<LeaderboardData>(`/quizzes/${quizId}/leaderboard`);
+export const LEADERBOARD_PAGE_SIZE = 20;
+
+export async function fetchLeaderboard(
+  quizId: string,
+  page = 1,
+  pageSize = LEADERBOARD_PAGE_SIZE,
+): Promise<LeaderboardData> {
+  const { data } = await apiClient.get<LeaderboardData>(`/quizzes/${quizId}/leaderboard`, {
+    params: { page, pageSize },
+  });
   return data;
 }
 
