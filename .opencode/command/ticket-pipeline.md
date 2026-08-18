@@ -28,9 +28,9 @@ Invoking this command IS standing approval to commit per ticket (one commit per 
 
 ## Project conventions (context for subagents)
 
-- Backend: Node.js 24 + Express.js 5 + TypeScript, route → middleware → db layering, `pg` on PostgreSQL (parameterized queries, `getClient()` transactions), Google OAuth + JWT, structured JSON logger, Vitest + supertest. Verify: `cd backend && npm run typecheck && npm test`.
+- Backend: Node.js 24 + Express.js 5 + TypeScript, route → middleware → db layering, `better-sqlite3` (prepared statements, `db.transaction()`), Google OAuth + JWT (carries `isAdmin`; `require-admin` gates `/api/admin/*`), structured JSON logger, Vitest + supertest. Verify: `cd backend && npm run typecheck && npm test`.
 - Frontend: React 19 + TypeScript + Vite + Tailwind CSS + Context API + Axios, Vitest + Testing Library + MSW. Verify: `cd frontend && npm test`.
-- No `any` in TS; no `console.log` in production paths; no string-concatenated SQL; `correct_opt` never exposed to the client; server-side timing via PostgreSQL `NOW()`.
+- No `any` in TS; no `console.log` in production paths; no string-concatenated SQL; `correct_opt` never exposed to the client; no mid-way storage (single final submit persists); seed-based question shuffle; single participation per completed attempt.
 - Commit: `NANO-<id>: <subject>`.
 
 ## Output

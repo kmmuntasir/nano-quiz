@@ -25,23 +25,29 @@ Read, in order, and let them override your defaults:
 
 **State:**
 - Local: `useState`.
-- Global/domain state: **React Context** — this project uses `AuthContext` for auth/quiz state (see `contexts/AuthContext.tsx`). Match that pattern; do NOT introduce a new state library (no Redux, no Zustand) unless the project already uses one.
+- Global/domain state: **React Context** — this project uses `AuthContext` for user/token/isAdmin (see `contexts/AuthContext.tsx`). Match that pattern; do NOT introduce a new state library (no Redux, no Zustand) unless the project already uses one.
 - URL state: React Router v6 params and search params for shareable state.
-- Forms: controlled components + local state with simple validation (this project has minimal forms — onboarding employee_id, etc.). Do not introduce a form library unless the project uses one.
+- Forms: controlled components + local state with simple validation (admin quiz/question forms). Do not introduce a form library unless the project uses one.
 
 **Naming:**
-- Files: match the project — typically PascalCase for components (`QuestionDisplay.tsx`), camelCase `use*` for hooks (`useAuth.ts`), camelCase for utils, SCREAMING_SNAKE_CASE for constants.
+- Files: match the project — typically PascalCase for components (`QuestionDisplay.tsx`), camelCase `use*` for hooks (`useQuizTimer.ts`), camelCase for utils, SCREAMING_SNAKE_CASE for constants.
 - Identifiers: camelCase vars/functions; PascalCase components and TS types/interfaces; SCREAMING_SNAKE_CASE constants. Acronyms consistent (`URL`, `ID`, `API`) as the project does.
 
-**Styling:** **Tailwind CSS** utility classes. Use Tailwind utilities directly in JSX (`className="..."`). Reference theme values via `tailwind.config.js` (extend colors, fonts, spacing) — avoid arbitrary magic values inline when a theme token exists. Do NOT introduce Chakra, Material UI, styled-components, CSS Modules, or a different styling mechanism.
+**Styling:** **Tailwind CSS** utility classes. Use Tailwind utilities directly in JSX (`className="...`). Reference theme values via `tailwind.config.js` (extend colors, fonts, spacing) — avoid arbitrary magic values inline when a theme token exists. Do NOT introduce Chakra, Material UI, styled-components, CSS Modules, or a different styling mechanism.
 
-**API client / data fetching:** use the project's shared client (`api/client.ts` — Axios with JWT interceptor, 401 auto-logout, custom errors `ApiError`/`EventConcludedError`). Service/API functions return typed data. Match the backend contract exactly — read `docs/api-docs/API.md` / the existing routes, do not invent shapes. `VITE_` prefix for env vars.
+**API client / data fetching:** use the project's shared client (`api/client.ts` — Axios with JWT interceptor, 401 auto-logout, custom errors `ApiError`). Service/API functions return typed data. Match the backend contract exactly — read `docs/api-docs/API.md` / the existing routes, do not invent shapes. `VITE_` prefix for env vars.
 
-**Routing:** React Router v6. **Important:** define `/quiz/complete` **before** `/quiz/:sequence` in route config — React Router matches top-to-bottom, `:sequence` would capture `complete` as a param value. Use lazy-loaded routes with Suspense + ErrorBoundary as the project does in `App.tsx`.
+**Routing:** React Router v6. Lazy-loaded routes with Suspense + ErrorBoundary as the project does in `App.tsx`. Admin routes gated by `isAdmin` (from `AuthContext`); admin UI is hidden entirely from non-admins (no admin links rendered for them).
 
-**Auth/quiz flow:** follow the project's `AuthContext` pattern — token/user/quizStatus in context + localStorage persistence, auto-fetch `/quiz/status` on mount. Gate routes with `ProtectedRoute` (`requireEmployeeId`/`requireQuizStarted`/`requireQuizCompleted`).
+**Auth/quiz flow:**
+- `AuthContext` holds user/token/isAdmin with localStorage persistence; `POST /api/auth/google` returns the JWT carrying `isAdmin`.
+- Quiz list page → `POST /api/quizzes/:id/start` returns `{ seed, quizId, questionCount, timeLimitSeconds }`. Store the session locally.
+- One question at a time: `GET /api/quizzes/:id/question/:seq?seed=...` (send the seed from start). Submitting an answer advances; no backtracking.
+- Client-side timer: per-quiz `timeLimitSeconds` countdown via a `useQuizTimer` hook (fake timers in tests). On timeout, auto-advance — including the last question, which ends the quiz and triggers submit.
+- Final submit `POST /api/quizzes/:id/submit` with `{ seed, answers, elapsedMs }` needs a **retry mechanism** (auto-retry on network failure + a manual retry button). Nothing is stored server-side until this lands, so a failed submit means a restart otherwise.
+- No mid-way storage: an abandoned attempt (tab closed) leaves no record; the user restarts from the beginning.
 
-**Async:** `async`/`await` — never raw promise chains, never ignored promises. Handle errors with try/catch and the project's error handling (toast/error message component/`EventConcludedError`), not raw `console.log` in production paths.
+**Async:** `async`/`await` — never raw promise chains, never ignored promises. Handle errors with try/catch and the project's error handling (toast/error message component), not raw `console.log` in production paths.
 
 **Imports:** match the project's import order/grouping. Use `import type` for type-only imports.
 

@@ -15,21 +15,21 @@ Vitest for both backend and frontend. Backend: HTTP-level route tests with `supe
 ## Backend (Vitest + supertest)
 
 - Spin up the Express app per suite; use `supertest` against the app instance (import the app, not a live server, when possible).
-- Auth'd route tests: sign a JWT with `jsonwebtoken` (`JWT_SECRET`) and send `Authorization: Bearer <token>`.
-- Mock the DB at the `pg` boundary when testing route logic (stub `query`/`getClient`) unless the test is a real integration test.
-- Test happy paths + error paths (401/403/404/409) + edge cases (deadline passed, timed-out question, sequential-access violation).
+- Auth'd route tests: sign a JWT with `jsonwebtoken` (`JWT_SECRET`) and send `Authorization: Bearer <token>`. For admin routes, sign with `{ userId, isAdmin: true }`.
+- Mock the DB at the `better-sqlite3` boundary when testing route logic (use an in-memory SQLite DB `:memory:` applied with the schema, or stub the `db` module) unless the test is a real integration test.
+- Test happy paths + error paths (400/401/403/404/409) + edge cases (quiz outside active window, wrong seed, already-participated, question_count exceeding bank).
 
 ```ts
 import request from 'supertest'
 import jwt from 'jsonwebtoken'
 import app from '../src/index'
 
-const token = jwt.sign({ userId: 'u1' }, process.env.JWT_SECRET!)
+const token = jwt.sign({ userId: 'u1', isAdmin: false }, process.env.JWT_SECRET!)
 
-describe('quiz status', () => {
-  it('returns current progress when authenticated', async () => {
+describe('quizzes', () => {
+  it('lists quizzes when authenticated', async () => {
     const res = await request(app)
-      .get('/api/quiz/status')
+      .get('/api/quizzes')
       .set('Authorization', `Bearer ${token}`)
     expect(res.status).toBe(200)
   })
@@ -81,8 +81,8 @@ cd frontend && npm test         # frontend vitest run
 
 ## Avoid
 
-- `vi.useRealTimers()` surprises — be explicit about fake timers for timer/countdown tests (this project has a per-question countdown).
-- Random data without a fixed seed.
+- `vi.useRealTimers()` surprises — be explicit about fake timers for timer/countdown tests (this project has a client-side per-quiz countdown).
+- Random data without a fixed seed (the quiz shuffle depends on a seeded PRNG — tests must control the seed).
 - Catching and swallowing in tests to "make them pass".
 - Commenting out failing tests instead of fixing them.
 - `console.log` for debug.

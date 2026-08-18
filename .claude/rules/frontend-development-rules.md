@@ -11,11 +11,11 @@ frontend/
     src/
         main.tsx           # Entry, GoogleOAuthProvider wrapper
         App.tsx            # Lazy-loaded routes with Suspense + ErrorBoundary
-        contexts/          # AuthContext.tsx — auth state, token, quizStatus, localStorage
+        contexts/          # AuthContext.tsx — auth state, token, isAdmin, localStorage
         api/               # client.ts — Axios with JWT interceptor, custom errors
-        pages/             # Login, Onboarding, QuizContainer, Question, CompletionScreen, LeaderboardPage
-        components/        # QuestionDisplay, StartQuizButton, ProtectedRoute, ErrorBoundary, ErrorMessage, EventConcluded, OfflineBanner
-        hooks/             # useAuth, useOfflineStatus
+        pages/             # Login, QuizList, QuizPlay (one question at a time), Completion, Leaderboard, Admin
+        components/        # QuizCard, StartQuizButton, QuestionDisplay, TimerCountdown, SubmitRetry, ProtectedRoute, ErrorBoundary, ErrorMessage
+        hooks/             # useAuth, useQuizTimer
     public/
     index.html
     vite.config.ts
@@ -30,14 +30,14 @@ frontend/
 - Explicit prop interfaces (`QuestionDisplayProps`), no `any`.
 - Co-locate `*.test.tsx` next to component.
 - Reusability: any element duplicated at ≥90% similarity in two places becomes a component.
-- Extract reusable logic into custom hooks (`useAuth`, `useOfflineStatus`).
+- Extract reusable logic into custom hooks (`useAuth`, `useQuizTimer`).
 
 ## State Management
 
-- **Global/domain state** — React Context. This project uses `AuthContext` (user, token, quizStatus, onboarding) with localStorage persistence and an auto-fetch of `/quiz/status` on mount. Do NOT introduce Redux/Zustand/etc.
+- **Global/domain state** — React Context. This project uses `AuthContext` (user, token, isAdmin) with localStorage persistence. Do NOT introduce Redux/Zustand/etc.
 - **Local state** — `useState`. Don't reach for global state when local suffices.
 - **URL state** — React Router v6 params and search params for shareable state.
-- **Form state** — controlled components + local state with simple validation. Do NOT introduce a form library unless the project uses one.
+- **Form state** — controlled components + local state with simple validation (admin quiz/question forms). Do NOT introduce a form library unless the project uses one.
 
 ## Styling — Tailwind CSS
 
@@ -48,19 +48,27 @@ frontend/
 ## Routing — React Router v6
 
 - Lazy-loaded routes with `React.lazy` + Suspense + ErrorBoundary (as in `App.tsx`).
-- **Route order matters:** define `/quiz/complete` **before** `/quiz/:sequence`. React Router matches top-to-bottom — `:sequence` would capture `complete` as a param value.
-- Gate routes with `ProtectedRoute` (`requireEmployeeId` / `requireQuizStarted` / `requireQuizCompleted`).
+- **Admin routes are gated by `isAdmin`** (from JWT via `AuthContext`); the admin UI is hidden entirely from non-admins (route guard + no admin links rendered).
+- Gate routes with `ProtectedRoute` (`requireAuth` / `requireAdmin`).
+
+## Quiz Play flow
+
+- **Start** → `POST /api/quizzes/:id/start` returns `{ seed, quizId, questionCount, timeLimitSeconds }`. Store in local state.
+- **Per question** → `GET /api/quizzes/:id/question/:seq?seed=...` (send the seed from start). Render one question at a time; submit the answer to advance.
+- **Timer** → per-quiz `timeLimitSeconds` countdown via `useQuizTimer`. On timeout, auto-advance — including the last question, which ends the quiz and triggers submit.
+- **Submit** → `POST /api/quizzes/:id/submit` with `{ seed, answers, elapsedMs }`. The submit must have a **retry mechanism** (auto-retry on network failure + a manual retry button) because nothing is stored server-side until it lands.
+- **No mid-way storage** — if the user abandons (closes the tab), there is no record; restart from the beginning.
 
 ## API Client
 
-- Use the shared client (`api/client.ts`) — Axios with JWT interceptor, 401 auto-logout, custom errors (`ApiError`, `EventConcludedError`).
-- Service functions return typed data: `async function fetchQuizStatus(): Promise<QuizStatus>`.
+- Use the shared client (`api/client.ts`) — Axios with JWT interceptor, 401 auto-logout, custom errors (`ApiError`).
+- Service functions return typed data: `async function fetchQuizzes(): Promise<Quiz[]>`, `async function startQuiz(id: string): Promise<QuizSession>`, etc.
 - Match the backend contract exactly (`docs/api-docs/API.md`) — never invent shapes.
 - Bearer token from `AuthContext`; injected via interceptor.
 
 ```typescript
-async function fetchQuizStatus(): Promise<QuizStatus> {
-  const { data } = await apiClient.get<QuizStatus>('/quiz/status')
+async function fetchQuizzes(): Promise<Quiz[]> {
+  const { data } = await apiClient.get<Quiz[]>('/quizzes')
   return data
 }
 ```
@@ -80,6 +88,7 @@ Validate at boot / on first use. Fail fast on missing required vars.
 
 - Unit/component: Vitest + Testing Library (jsdom).
 - Mock API calls via MSW (`msw`) in component tests.
+- Timer logic tested with Vitest fake timers.
 - Co-locate `*.test.tsx` next to source.
 
 ## Build and Run

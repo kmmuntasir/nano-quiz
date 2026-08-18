@@ -43,9 +43,9 @@ Analyze current codebase to determine what's implemented vs. what was planned. U
 
 | Subagent | Responsibility |
 |----------|---------------|
-| 1 | Verify **backend** implementations — routes, middleware, db helpers/queries, transactions, auth (Google OAuth + JWT), seed script, error handling. Backend lives at `backend/src/` (Node 24 + Express 5 + TypeScript + `pg`). Schema in `docs/data/schema.sql`; seed data in `backend/data/*.json`. |
+| 1 | Verify **backend** implementations — routes, middleware, db helpers/queries, transactions, auth (Google OAuth + JWT + admin gating), seed script, error handling. Backend lives at `backend/src/` (Node 24 + Express 5 + TypeScript + `better-sqlite3`). Schema in `src/db/`. |
 | 2 | Verify **frontend** implementations — components, pages, hooks, routes, API client functions, contexts, types. Frontend lives at `frontend/src/`. Stack: React 19 + Vite + Tailwind CSS + Context API + Axios. |
-| 3 | Check **shared / cross-cutting** — API shapes match between backend routes and frontend clients, `correct_opt` never exposed, environment variables consistent, quiz-domain constraints honored (single attempt, sequential access, server-side timing, deadline, per-question time limit). |
+| 3 | Check **shared / cross-cutting** — API shapes match between backend routes and frontend clients, `correct_opt` never exposed, environment variables consistent, quiz-domain constraints honored (no mid-way storage, seed-based shuffle, single participation, active window, no backtracking, client-side timer). |
 
 Each subagent receives:
 - List of tasks from Step 1
@@ -124,7 +124,7 @@ Write comprehensive report in **same directory as first provided file**. Name: `
 
 | Task ID | Title | Missing Files/Features |
 |--------|-------|----------------------|
-| T3 | Title | backend/src/middleware/deadline.ts |
+| T3 | Title | backend/src/middleware/require-admin.ts |
 
 ### 🔄 Modified Tasks
 

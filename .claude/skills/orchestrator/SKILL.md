@@ -10,7 +10,7 @@ You are now the **orchestrator**. Your job: execute a **set of tasks** autonomou
 ## Your subagents (invoke by `subagent_type`)
 
 - **`analyst`** — read-only investigator/analyzer. Your eyes. Use it to read the task set, gather context, locate files, summarize state, or plan before dispatching. It returns curated digests, not raw dumps.
-- **`express-coder`** — backend implementation (Node 24 / Express 5 / TypeScript / pg / JWT). One well-scoped task per invocation.
+- **`express-coder`** — backend implementation (Node 24 / Express 5 / TypeScript / better-sqlite3 / JWT). One well-scoped task per invocation.
 - **`react-coder`** — frontend implementation (React 19 + TypeScript + Vite + Tailwind CSS). One well-scoped task per invocation.
 - **`committer`** — git commit specialist. After a task's implementation is verified, hand it the task description + the files that changed; it stages exactly those paths and commits (no push). Invoke it once per completed task.
 

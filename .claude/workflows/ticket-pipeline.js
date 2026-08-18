@@ -14,8 +14,8 @@
 //   curate -> plan -> breakdown -> implement (parallel when disjoint) -> verify -> commit
 //
 // Stack assumptions (nano-quiz):
-//   - Backend:  Node.js 24 + Express.js 5 + TypeScript (pg driver on PostgreSQL,
-//               Google OAuth + JWT, structured JSON logging)
+//   - Backend:  Node.js 24 + Express.js 5 + TypeScript (better-sqlite3, no ORM,
+//               Google OAuth + JWT with isAdmin, structured JSON logging)
 //   - Frontend: React 19 + TypeScript + Vite + Tailwind CSS + Context API + Axios
 //   - Commits:  `NANO-<id>: <subject>`; ticket id goes in the subject prefix.
 //
@@ -194,7 +194,7 @@ function implementPrompt(task, breakdown) {
     'You are the implementer subagent in the ticket-pipeline workflow.',
     'Implement every task in the breakdown. Follow project conventions:',
     '- Backend: Node.js 24 + Express.js 5 + TypeScript, route -> middleware -> db layering,',
-    '  pg driver on PostgreSQL (parameterized queries, getClient() transactions), Google OAuth + JWT,',
+    '  better-sqlite3 (prepared statements, db.transaction()), Google OAuth + JWT with isAdmin,',
     '  structured JSON logger, Vitest + supertest tests.',
     '- Frontend: React 19 + TypeScript + Vite + Tailwind CSS + Context API + Axios,',
     '  Vitest + Testing Library tests, MSW for API mocks.',
@@ -232,11 +232,12 @@ function backendImplementPrompt(task, breakdown) {
     JSON.stringify(backend, null, 2),
     '',
     'Conventions: RESTful endpoints in routes/, cross-cutting concerns in middleware/,',
-    'pg.Pool owned by db/index.ts with query<T>() helper and getClient() for transactions,',
-    'parameterized queries only ($1, $2, ...), server-side timing via PostgreSQL NOW(),',
-    'Google OAuth via google-auth-library + JWT via jsonwebtoken (middleware/auth.ts),',
+    'better-sqlite3 connection owned by db/index.ts with prepared statements and db.transaction(),',
+    'prepared statements only (? bound params), server clock for business timestamps,',
+    'Google OAuth via google-auth-library + JWT via jsonwebtoken (middleware/auth.ts, isAdmin in claims),',
     'structured JSON logging via utils/logger.ts (no console.log),',
-    'consistent error envelope { error, message }, correct_opt never sent to the client.',
+    'consistent error envelope { error, message }, correct_opt never sent to the client,',
+    'no mid-way storage (single final submit persists), seed-based question shuffle, single participation.',
     '',
     'Write the code. Run `cd backend && npm run typecheck && npm test` if possible.',
     'Return file paths changed + one line each. Do NOT commit.',
@@ -260,10 +261,11 @@ function frontendImplementPrompt(task, breakdown) {
     '',
     'Conventions: functional components + hooks, explicit prop interfaces (no `any`),',
     'Tailwind utility classes + theme tokens (no stray inline styles, no magic values),',
-    'AuthContext (React Context) for global auth/quiz state + localStorage persistence,',
+    'AuthContext (React Context) for global auth state (user/token/isAdmin) + localStorage persistence,',
     'shared apiClient (Axios) with JWT interceptor + 401 auto-logout + custom errors,',
-    'React Router v6 (define /quiz/complete before /quiz/:sequence), co-located *.test.ts(x),',
-    'VITE_ prefix for env vars.',
+    'React Router v6 with admin routes gated by isAdmin (admin UI hidden from non-admins),',
+    'seed-based quiz flow: start returns seed -> fetch question by seq with seed -> client-side timer',
+    'with auto-advance -> final submit with retry mechanism; co-located *.test.ts(x), VITE_ prefix for env vars.',
     '',
     'Write the code. Run `cd frontend && npm test` if possible.',
     'Return file paths changed + one line each. Do NOT commit.',

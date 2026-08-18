@@ -22,7 +22,7 @@
 
 - Prefer explicit interfaces over `any`. Use `unknown` when truly unknown, then narrow.
 - Type all function params and return values; let inference fill obvious locals.
-- Use union types (`'faq' | 'trivia'`) over loose `string` for discriminated fields.
+- Use union types (`'single' | 'multiple'`) over loose `string` for discriminated fields.
 - Avoid `null` where `undefined` + optional chaining reads better — match project convention.
 - Don't over-abstract generics; add them only when they earn their keep.
 
@@ -36,7 +36,7 @@
 ## Async & Errors
 
 - `async`/`await` only — no raw promise chains, no ignored promises.
-- Wrap API calls in try/catch; surface errors via the project's error type (`ApiError`, `EventConcludedError`) and UI.
+- Wrap API calls in try/catch; surface errors via the project's error type (`ApiError`) and UI.
 - No `console.log` in production paths.
 
 ## Modules / Imports

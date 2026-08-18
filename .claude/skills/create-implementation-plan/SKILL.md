@@ -51,11 +51,11 @@ Use up to **3 parallel `analyst` subagents** (via the Agent tool, `subagent_type
 
 | Subagent | Responsibility |
 |----------|---------------|
-| **Integration points** | Where the new/changed capability plugs in: relevant routes/middleware/db helpers, the schema (`docs/data/schema.sql`) it extends, and any new API contract. Cite `path:line`. |
+| **Integration points** | Where the new/changed capability plugs in: relevant routes/middleware/db helpers, the schema (`backend/src/db/`) it extends, and any new API contract. Cite `path:line`. |
 | **Patterns & conventions** | Existing precedents to mirror: analogous features already implemented (routes, middleware chain, query helpers, error envelope), naming, validation, configuration via env vars. |
-| **Cross-cutting & frontend** | Shared types/utilities, security/auth implications (JWT middleware, `correct_opt` never exposed), quiz-domain constraints (single attempt, sequential access, server-side timing, deadline), and frontend impact (API client, hooks, components, pages, routes, contexts). |
+| **Cross-cutting & frontend** | Shared types/utilities, security/auth implications (JWT middleware, `correct_opt` never exposed, admin gating), quiz-domain constraints (no mid-way storage, seed-based shuffle, single participation, active window, no backtracking), and frontend impact (API client, hooks, components, pages, routes, contexts). |
 
-Backend lives at `backend/src/` (Node 24 + Express 5 + TypeScript + `pg`; schema in `docs/data/schema.sql`; question seeding via `backend/data/*.json` + `npm run seed`). Frontend lives at `frontend/src/` (React 19 + Vite + Tailwind CSS + Context API + Axios).
+Backend lives at `backend/src/` (Node 24 + Express 5 + TypeScript + `better-sqlite3`, schema in `src/db/`; `npm run seed` applies it idempotently). Frontend lives at `frontend/src/` (React 19 + Vite + Tailwind CSS + Context API + Axios).
 
 Each subagent returns a **curated digest** with `path:line` evidence — not raw file dumps. Work from those digests.
 
@@ -69,7 +69,7 @@ Combine the digests into a single coherent picture:
 - **Feature / enhancement** → state the design: new/changed schema, routes, middleware, db helpers, API contract, seed data, frontend pieces — and a sensible build order (schema → db helper → route/middleware → frontend)
 - **Both** → list edge cases & risks (concurrency, single-attempt enforcement, sequential access, related paths needing the same change, regressions, migration concerns) and any open questions
 
-Respect project conventions: routes handle HTTP, middleware does cross-cutting concerns, `db/index.ts` owns the pool; parameterized queries only; `correct_opt` never exposed; server-side timing via PostgreSQL `NOW()`; errors via the JSON envelope.
+Respect project conventions: routes handle HTTP, middleware does cross-cutting concerns, `db/index.ts` owns the `better-sqlite3` connection; prepared statements only; `correct_opt` never exposed; no mid-way storage (final submit only); seed-based question shuffle; errors via the JSON envelope.
 
 ### Step 4: Write the implementation plan
 
@@ -102,8 +102,8 @@ Write the plan to the **same directory as the ticket**, named `{ticket-filename}
 | Route | `backend/src/routes/Xxx.ts` | ... |
 | Middleware | `backend/src/middleware/Xxx.ts` | ... |
 | DB | `backend/src/db/index.ts` | ... |
-| Schema | `docs/data/schema.sql` | ... |
-| Seed | `backend/data/faq_questions.json` | ... |
+| Schema | `backend/src/db/` | ... |
+| Seed | `backend/src/db/schema.ts` | ... |
 | Component | `frontend/src/components/Xxx.tsx` | ... |
 | ... | ... | ... |
 

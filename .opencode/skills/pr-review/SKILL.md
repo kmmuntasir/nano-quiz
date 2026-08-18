@@ -90,22 +90,22 @@ Check whether tests adequately cover changes.
 ### 4a. Node 24 / Express 5 / TypeScript Backend
 
 **Layering**
-- Route → middleware → db layering respected (no business logic dumped in middleware, no ad-hoc pools in routes)?
+- Route → middleware → db layering respected (no business logic dumped in middleware, no ad-hoc DB connections in routes)?
 - Routes thin (HTTP only: parse/validate input, call db/service, shape response)?
-- `db/index.ts` owns the single `pg.Pool`; `query<T>()` / `getClient()` used consistently?
+- `db/index.ts` owns the single `better-sqlite3` connection; typed prepared statements used consistently?
 
 **Persistence & Schema**
-- **Parameterized queries only** (`$1`, `$2`, ...) — no string-concatenated SQL (injection risk)?
-- Transactions via `getClient()` + `BEGIN`/`COMMIT`/`ROLLBACK` for multi-statement mutations?
-- All business timestamps via PostgreSQL `NOW()` — no client timestamps for timing?
-- Schema changes reflected in `docs/data/schema.sql`?
+- **Prepared statements only** (`?` bound params) — no string-concatenated SQL (injection risk)?
+- Transactions via `db.transaction()` for multi-statement mutations (quiz start, final scoring)?
+- Business timestamps via the SQLite server clock; client `elapsedMs` used only for leaderboard duration?
+- Schema changes reflected in `backend/src/db/`?
 
 **Auth & Security**
 - Google ID token verified server-side via `google-auth-library` (`verifyIdToken`); `aud` matches `GOOGLE_CLIENT_ID`?
-- `RESTRICT_DOMAIN` enforced when set?
-- JWT signed/verified with `JWT_SECRET`; `expiresIn: '2h'`; middleware attaches `userId`?
-- **`correct_opt` never sent to the client** — scoring server-side only?
-- CORS restricted to `FRONTEND_URL` (no `*` in prod)? Deadline middleware (`EVENT_DEADLINE_ISO`) applied to quiz endpoints (exempt: status, leaderboard)?
+- `RESTRICT_DOMAIN` enforced when set? `ADMIN_EMAILS` → `isAdmin` JWT claim at login; `require-admin` gates `/api/admin/*`?
+- JWT signed/verified with `JWT_SECRET`; `expiresIn: '2h'` carrying `userId` + `isAdmin`; middleware attaches both?
+- **`correct_opt` never sent to the client** — scoring server-side on final submit only?
+- CORS restricted to `FRONTEND_URL` (no `*` in prod)? Quiz active window enforced on start (in-flight attempts continue past end_at)?
 - No secrets/tokens/JWTs/payloads logged?
 
 **Error Handling**
@@ -121,11 +121,11 @@ Check whether tests adequately cover changes.
 **State Management**
 - React Context (`AuthContext`) used for global/domain state; `useState` for local?
 - No unnecessary new state libraries introduced?
-- localStorage persistence handled cleanly; no stale-closure bugs in auto-fetch of `/quiz/status`?
+- localStorage persistence handled cleanly (token/isAdmin persisted; no stale-closure bugs)?
 
 **Hooks**
-- Custom hooks extracted for reusable logic (`useAuth`, `useOfflineStatus`)?
-- `useEffect`/`useMemo`/`useCallback` dependencies correct? Cleanup for timers (per-question countdown)?
+- Custom hooks extracted for reusable logic (`useAuth`, `useQuizTimer`)?
+- `useEffect`/`useMemo`/`useCallback` dependencies correct? Cleanup for timers (client-side per-quiz countdown)?
 
 **TypeScript**
 - Explicit types instead of `any` (use `unknown` when truly unknown)?
@@ -134,7 +134,7 @@ Check whether tests adequately cover changes.
 
 **Error Handling**
 - Errors caught and handled appropriately? `async`/`await` wrapped in `try/catch`?
-- API errors surfaced via `ApiError`/`EventConcludedError`; `EventConcluded` screen shown on deadline?
+- API errors surfaced via `ApiError`; final submit has a retry mechanism (auto-retry + manual retry button)?
 - React error boundaries for component crashes?
 
 **Component Design**
@@ -142,8 +142,8 @@ Check whether tests adequately cover changes.
 - Functional components with hooks only?
 
 **Routing**
-- `/quiz/complete` defined **before** `/quiz/:sequence` (React Router top-to-bottom matching)?
-- Lazy-loaded routes with Suspense + ErrorBoundary? `ProtectedRoute` gates applied (`requireEmployeeId`/`requireQuizStarted`/`requireQuizCompleted`)?
+- Admin routes gated by `isAdmin` (from `AuthContext`); admin UI hidden entirely from non-admins?
+- Lazy-loaded routes with Suspense + ErrorBoundary? `ProtectedRoute` gates applied (`requireAuth`/`requireAdmin`)?
 
 **Styling**
 - Tailwind utility classes used — no stray inline `style={{}}`? Theme tokens from `tailwind.config.js` referenced (no magic arbitrary values when a token exists)?
@@ -161,8 +161,8 @@ Check whether tests adequately cover changes.
 
 - **Backend tests** present for new logic: Vitest + supertest HTTP-level tests, JWT generated per test via `jsonwebtoken`?
 - **Frontend tests** use Vitest + Testing Library; MSW for API mocks?
-- Error cases covered alongside happy paths (401/403/404/409, deadline, timed-out)?
-- Mocks appropriate (`vi.fn()` / MSW for frontend; db-boundary stubs for backend)?
+- Error cases covered alongside happy paths (400/401/403/404/409, quiz inactive, already-participated, wrong seed)?
+- Mocks appropriate (`vi.fn()` / MSW for frontend; in-memory SQLite `:memory:` or db-module stubs for backend)?
 - Coverage: business logic >80%, components >70%?
 
 ## 6. Provide Senior-Level Review Summary
@@ -205,14 +205,15 @@ Write comprehensive PR review report as markdown file, save in `./docs/ai_genera
 - [ ] Type-only imports use `import type`
 
 ### Express (Backend)
-- [ ] Parameterized queries only — no string concat / injection
-- [ ] Transactions via `getClient()` for multi-statement mutations
+- [ ] Prepared statements only — no string concat / injection
+- [ ] Transactions via `db.transaction()` for multi-statement mutations
 - [ ] No swallowed exceptions (empty catch blocks)
-- [ ] Server-side timing via PostgreSQL `NOW()`
+- [ ] Server clock for business timestamps; client `elapsedMs` only for leaderboard duration
 - [ ] No `console.log` — logging via `utils/logger.ts`
-- [ ] `correct_opt` never exposed to the client
+- [ ] `correct_opt` never exposed to the client; scoring server-side on final submit
 - [ ] Validation at the route edge
-- [ ] JWT verify middleware on protected routes; deadline middleware applied
+- [ ] JWT verify middleware on protected routes; `require-admin` gates `/api/admin/*`
+- [ ] No mid-way storage — only the final submit persists; single participation enforced
 
 ### React (Frontend)
 - [ ] Functional components with hooks
@@ -220,13 +221,14 @@ Write comprehensive PR review report as markdown file, save in `./docs/ai_genera
 - [ ] No unnecessary re-renders (`useMemo`/`useCallback` where measured)
 - [ ] Context used appropriately for global state
 - [ ] Tailwind utilities + theme tokens (no stray inline styles, no magic values)
-- [ ] Route order correct (`/quiz/complete` before `/quiz/:sequence`)
+- [ ] Admin routes gated by `isAdmin`; admin UI hidden from non-admins
+- [ ] Seed sent with each question fetch; client-side timer with auto-advance; final submit retry mechanism
 
 ### Error Handling
 - [ ] `try/catch` for async operations
 - [ ] React error boundaries
 - [ ] Consistent backend error envelope
-- [ ] API errors handled gracefully (`ApiError`/`EventConcludedError`)
+- [ ] API errors handled gracefully (`ApiError`); final submit retry mechanism present
 - [ ] Meaningful error messages
 
 ### Security
