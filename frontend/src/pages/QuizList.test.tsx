@@ -150,6 +150,7 @@ describe('QuizList', () => {
     const user = userEvent.setup();
 
     await user.click(await screen.findByRole('button', { name: 'Start quiz' }));
+    await user.click(screen.getByRole('button', { name: 'Yes' }));
 
     expect(
       await screen.findByRole('heading', { name: 'What year was the company founded?' }),
@@ -171,6 +172,7 @@ describe('QuizList', () => {
     const user = userEvent.setup();
 
     await user.click(await screen.findByRole('button', { name: 'Start quiz' }));
+    await user.click(screen.getByRole('button', { name: 'Yes' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'You have already taken this quiz.',
@@ -204,6 +206,7 @@ describe('QuizList', () => {
     const user = userEvent.setup();
 
     await user.click(await screen.findByRole('button', { name: 'Start quiz' }));
+    await user.click(screen.getByRole('button', { name: 'Yes' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'You have already taken this quiz.',

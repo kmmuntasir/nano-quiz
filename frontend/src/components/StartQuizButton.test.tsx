@@ -161,6 +161,7 @@ describe('StartQuizButton', () => {
     renderWithAuth(<StartQuizButton quiz={buildQuiz()} now={NOW} onStarted={onStarted} />);
 
     await user.click(screen.getByRole('button', { name: 'Start quiz' }));
+    await user.click(screen.getByRole('button', { name: 'Yes' }));
 
     expect(onStarted).toHaveBeenCalledWith(session);
     expect(screen.getByRole('button', { name: 'Start quiz' })).toBeEnabled();
@@ -180,9 +181,64 @@ describe('StartQuizButton', () => {
     renderWithAuth(<StartQuizButton quiz={buildQuiz()} now={NOW} onStarted={onStarted} />);
 
     await user.click(screen.getByRole('button', { name: 'Start quiz' }));
+    await user.click(screen.getByRole('button', { name: 'Yes' }));
 
     expect(onStarted).not.toHaveBeenCalled();
     expect(screen.getByRole('alert')).toHaveTextContent('You have already taken this quiz.');
     expect(screen.getByRole('button', { name: 'Start quiz' })).toBeDisabled();
+  });
+
+  it('should_show_dialog_with_exact_message_when_start_clicked', async () => {
+    const user = userEvent.setup();
+    renderWithAuth(
+      <StartQuizButton quiz={buildQuiz({ questionCount: 5, timeLimitSeconds: 20 })} now={NOW} />,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Start quiz' }));
+
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'This quiz contains 5 questions, each has a time limit of 20 seconds. Are you ready?',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('should_show_dialog_when_admin_clicks_preview', async () => {
+    const user = userEvent.setup();
+    renderWithAuth(<StartQuizButton quiz={buildQuiz()} now={NOW} />, { isAdmin: true });
+
+    await user.click(screen.getByRole('button', { name: 'Preview quiz' }));
+
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+  });
+
+  it('should_not_fire_post_and_close_dialog_when_no_clicked', async () => {
+    const postSpy = vi.fn();
+    server.use(http.post('/api/quizzes/q1/start', postSpy));
+    const onStarted = vi.fn();
+    const user = userEvent.setup();
+    renderWithAuth(<StartQuizButton quiz={buildQuiz()} now={NOW} onStarted={onStarted} />);
+
+    await user.click(screen.getByRole('button', { name: 'Start quiz' }));
+    await user.click(screen.getByRole('button', { name: 'No' }));
+
+    expect(postSpy).not.toHaveBeenCalled();
+    expect(onStarted).not.toHaveBeenCalled();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Start quiz' })).toBeEnabled();
+  });
+
+  it('should_close_dialog_as_cancel_when_escape_pressed', async () => {
+    const postSpy = vi.fn();
+    server.use(http.post('/api/quizzes/q1/start', postSpy));
+    const user = userEvent.setup();
+    renderWithAuth(<StartQuizButton quiz={buildQuiz()} now={NOW} />);
+
+    await user.click(screen.getByRole('button', { name: 'Start quiz' }));
+    await user.keyboard('{Escape}');
+
+    expect(postSpy).not.toHaveBeenCalled();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 });

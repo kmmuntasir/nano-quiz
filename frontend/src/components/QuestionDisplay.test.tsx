@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { createEvent, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import QuestionDisplay from './QuestionDisplay';
 import type { Question } from '../api/types';
@@ -49,5 +49,16 @@ describe('QuestionDisplay', () => {
     expect(buttons).toHaveLength(buildQuestion().options.length);
     expect(screen.queryByRole('link')).not.toBeInTheDocument();
     expect(screen.queryByText(/back|previous|next/i)).not.toBeInTheDocument();
+  });
+
+  it('should_prevent_copy_cut_and_contextmenu_on_quiz_card', () => {
+    const { container } = render(<QuestionDisplay question={buildQuestion()} onAnswer={vi.fn()} />);
+    const card = container.querySelector('section') as HTMLElement;
+
+    for (const factory of [createEvent.copy, createEvent.cut, createEvent.contextMenu]) {
+      const event = factory(card);
+      fireEvent(card, event);
+      expect(event.defaultPrevented).toBe(true);
+    }
   });
 });

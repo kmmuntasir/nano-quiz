@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ApiError, startQuiz } from '../api/client';
 import type { Quiz, QuizSession } from '../api/types';
+import ConfirmModal from './ConfirmModal';
 import { useAuth } from '../hooks/useAuth';
 import { formatRelativeTime } from '../hooks/useRelativeTime';
 
@@ -41,6 +42,7 @@ export default function StartQuizButton({
   const { isAdmin } = useAuth();
   const [starting, setStarting] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState(false);
   const canStart = quiz.canStart;
   const reason = canStart ? null : disabledReason(quiz, now);
 
@@ -64,7 +66,7 @@ export default function StartQuizButton({
         type="button"
         disabled={!canStart || starting || startError !== null}
         aria-disabled={!canStart}
-        onClick={() => void handleClick()}
+        onClick={() => setConfirming(true)}
         className="w-full rounded-md bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 dark:disabled:bg-slate-700 dark:disabled:text-slate-400"
       >
         {starting ? 'Starting…' : isAdmin ? 'Preview quiz' : 'Start quiz'}
@@ -76,6 +78,18 @@ export default function StartQuizButton({
         <p className="text-xs text-red-600 dark:text-red-400" role="alert">
           {startError}
         </p>
+      )}
+      {confirming && (
+        <ConfirmModal
+          message={`This quiz contains ${quiz.questionCount} questions, each has a time limit of ${quiz.timeLimitSeconds} seconds. Are you ready?`}
+          confirmLabel="Yes"
+          cancelLabel="No"
+          onConfirm={() => {
+            setConfirming(false);
+            void handleClick();
+          }}
+          onCancel={() => setConfirming(false)}
+        />
       )}
     </div>
   );

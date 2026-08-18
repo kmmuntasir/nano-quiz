@@ -13,6 +13,23 @@ const TIMEOUT_SENTINEL = -1;
 const GENERIC_ERROR_MESSAGE = 'Something went wrong. Please try again.';
 const SUBMIT_FAILED_MESSAGE = 'We could not save your result. Please retry.';
 
+interface LoadedQuestion {
+  question: Question;
+  // Maps display position -> original option index; shuffled once at load time
+  // (never during render) so answers keep the backend's original indices.
+  optionOrder: number[];
+}
+
+// Fisher-Yates over [0..length-1]; display-only, so Math.random() is fine here.
+function shuffledOptionOrder(length: number): number[] {
+  const order = Array.from({ length }, (_, i) => i);
+  for (let i = length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [order[i], order[j]] = [order[j], order[i]];
+  }
+  return order;
+}
+
 type SubmitState = 'idle' | 'submitting' | 'failed';
 
 interface QuizPlayLocationState {
@@ -31,7 +48,7 @@ export default function QuizPlay() {
 
   const [seq, setSeq] = useState(1);
   const [answers, setAnswers] = useState<number[]>([]);
-  const [question, setQuestion] = useState<Question | null>(null);
+  const [question, setQuestion] = useState<LoadedQuestion | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const [submitState, setSubmitState] = useState<SubmitState>('idle');
@@ -49,7 +66,7 @@ export default function QuizPlay() {
     }
     try {
       const data = await fetchQuestion(session.quizId, seq, session.seed);
-      setQuestion(data);
+      setQuestion({ question: data, optionOrder: shuffledOptionOrder(data.options.length) });
       setError(null);
     } catch (cause) {
       setError(cause instanceof ApiError ? cause.message : GENERIC_ERROR_MESSAGE);
@@ -212,7 +229,15 @@ export default function QuizPlay() {
               <div className="flex w-full items-center justify-end">
                 <TimerCountdown remaining={remaining} />
               </div>
-              <QuestionDisplay question={question} onAnswer={handleAnswer} />
+              <QuestionDisplay
+                question={{
+                  ...question.question,
+                  options: question.optionOrder.map((i) => question.question.options[i]),
+                }}
+                onAnswer={(displayIndex) =>
+                  handleAnswer(question.optionOrder[displayIndex] as number)
+                }
+              />
             </>
           )}
         </div>

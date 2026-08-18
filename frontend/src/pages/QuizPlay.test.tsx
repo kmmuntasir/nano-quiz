@@ -102,6 +102,23 @@ describe('QuizPlay', () => {
     expect(screen.queryByRole('heading', { name: QUESTIONS[0].text })).not.toBeInTheDocument();
   });
 
+  it('should_display_options_as_valid_permutation_and_record_original_indices', async () => {
+    const payloads = stubSubmit();
+    const user = userEvent.setup();
+    renderPlay();
+
+    const heading = await screen.findByRole('heading', { name: QUESTIONS[0].text });
+    const card = heading.closest('section') as HTMLElement;
+    const displayed = Array.from(card.querySelectorAll('button')).map((b) => b.textContent);
+    expect(displayed.slice().sort()).toEqual([...QUESTIONS[0].options].sort());
+
+    await user.click(screen.getByRole('button', { name: 'B1' }));
+    await user.click(await screen.findByRole('button', { name: 'B2' }));
+
+    expect(await screen.findByText('You scored 1 of 2')).toBeInTheDocument();
+    expect(payloads[0].answers).toEqual([1, 1]);
+  });
+
   it('should_submit_seed_answers_and_elapsedMs_when_last_question_answered', async () => {
     const payloads = stubSubmit();
     const user = userEvent.setup();
