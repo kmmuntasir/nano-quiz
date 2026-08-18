@@ -119,7 +119,7 @@ Final submit. Persists the participation (single, permanent) and scores server-s
 }
 ```
 
-`answers` is an array of selected option indices, one per question in seed order. `elapsedMs` is client-reported and used only for the leaderboard duration.
+`answers` is an array of selected option indices, one per question in seed order. An entry may also be `-1` — the client-side timeout sentinel (recorded positionally, always scored as incorrect). Any other out-of-range value (`-2`, fractions, indices ≥ the question's option count) is rejected with `400`. `elapsedMs` is client-reported and used only for the leaderboard duration.
 
 **Response** `200`
 
@@ -141,6 +141,8 @@ Correct answers are never returned. The submit is idempotent for a given user+qu
 
 Paginated leaderboard for a quiz, ranked `score DESC, duration ASC`.
 
+Query params: `page` (default `1`) and `pageSize` (default `20`, capped at `100`) — must be positive integers; non-integer, zero, or negative values are rejected with `400`.
+
 **Response** `200`
 
 ```json
@@ -155,6 +157,8 @@ Paginated leaderboard for a quiz, ranked `score DESC, duration ASC`.
   ]
 }
 ```
+
+**Errors** `400` invalid `page`/`pageSize` (non-integer, zero, or negative) · `404` quiz not found.
 
 ---
 
