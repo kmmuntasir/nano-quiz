@@ -29,7 +29,9 @@ function parsePagingParam(value: unknown): number | undefined {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : Number.NaN;
 }
 
-function getLeaderboard(req: Request, res: Response): void {
+// Shared by the public route and the admin leaderboard route — one pagination
+// and response-shape implementation, no duplication.
+export function getLeaderboard(req: Request, res: Response): void {
   // Guard order: validation → existence.
   const page = parsePagingParam(req.query.page);
   const pageSize = parsePagingParam(req.query.pageSize);

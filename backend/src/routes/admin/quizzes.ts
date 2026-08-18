@@ -1,10 +1,13 @@
+import { randomUUID } from 'node:crypto';
+
 import { Router } from 'express';
 import type { Request, Response } from 'express';
 import { db } from '../../db/index.js';
 import { quizzes } from '../../db/quizzes.js';
-import type { QuizInput, QuizRow } from '../../db/quizzes.js';
+import type { AdminQuestionRow, QuizInput, QuizRow } from '../../db/quizzes.js';
 import { requireAuth } from '../../middleware/auth.js';
 import { requireAdmin } from '../../middleware/require-admin.js';
+import { getLeaderboard } from '../leaderboard.js';
 
 const DEFAULT_TIME_LIMIT_SECONDS = 15;
 
@@ -166,9 +169,171 @@ function deleteQuiz(req: Request, res: Response): void {
   res.status(204).send();
 }
 
+// --- Question management ---
+
+interface AdminQuestionPayload {
+  id: string;
+  text: string;
+  options: string[];
+  correctOpt: number;
+}
+
+function toQuestionPayload(row: AdminQuestionRow): AdminQuestionPayload {
+  return {
+    id: row.id,
+    text: row.prompt,
+    options: JSON.parse(row.options) as string[],
+    correctOpt: row.correctOpt,
+  };
+}
+
+interface QuestionInput {
+  text: string;
+  options: string[];
+  correctOpt: number;
+}
+
+interface ParsedQuestionInput {
+  input?: QuestionInput;
+  message?: string;
+}
+
+function parseQuestionInput(body: Record<string, unknown>): ParsedQuestionInput {
+  const text = body.text;
+  if (typeof text !== 'string' || text.trim().length === 0) {
+    return { message: 'A non-empty question text is required.' };
+  }
+
+  const options = body.options;
+  if (
+    !Array.isArray(options) ||
+    options.length < 2 ||
+    !options.every((option) => typeof option === 'string' && option.trim().length > 0)
+  ) {
+    return { message: 'options must be an array of at least 2 non-empty strings.' };
+  }
+
+  const correctOpt = body.correctOpt;
+  if (
+    typeof correctOpt !== 'number' ||
+    !Number.isInteger(correctOpt) ||
+    correctOpt < 0 ||
+    correctOpt >= options.length
+  ) {
+    return {
+      message: 'correctOpt must be an integer between 0 and options.length - 1.',
+    };
+  }
+
+  return { input: { text, options, correctOpt } };
+}
+
+function listQuestionsHandler(req: Request, res: Response): void {
+  const quiz = quizzes.getById(String(req.params.id));
+  if (!quiz) {
+    res.status(404).json({ error: 'NOT_FOUND', message: 'Quiz not found.' });
+    return;
+  }
+
+  res.status(200).json(quizzes.listQuestions(quiz.id).map(toQuestionPayload));
+}
+
+function createQuestion(req: Request, res: Response): void {
+  const quiz = quizzes.getById(String(req.params.id));
+  if (!quiz) {
+    res.status(404).json({ error: 'NOT_FOUND', message: 'Quiz not found.' });
+    return;
+  }
+
+  const parsed = parseQuestionInput(req.body as Record<string, unknown>);
+  if (!parsed.input) {
+    res.status(400).json({ error: 'VALIDATION_ERROR', message: parsed.message });
+    return;
+  }
+
+  const seq = (quizzes.maxQuestionSeq(quiz.id) ?? 0) + 1;
+  const row = quizzes.insertQuestion(
+    quiz.id,
+    randomUUID(),
+    seq,
+    parsed.input.text,
+    JSON.stringify(parsed.input.options),
+    parsed.input.correctOpt,
+  );
+  res.status(201).json(toQuestionPayload(row));
+}
+
+function updateQuestion(req: Request, res: Response): void {
+  const quiz = quizzes.getById(String(req.params.id));
+  if (!quiz) {
+    res.status(404).json({ error: 'NOT_FOUND', message: 'Quiz not found.' });
+    return;
+  }
+
+  const question = quizzes.findQuestionById(quiz.id, String(req.params.questionId));
+  if (!question) {
+    res.status(404).json({ error: 'NOT_FOUND', message: 'Question not found.' });
+    return;
+  }
+
+  if (quizzes.countAttempts(quiz.id) > 0) {
+    res
+      .status(409)
+      .json({ error: 'QUIZ_HAS_ATTEMPTS', message: 'Quizzes with attempts cannot be edited.' });
+    return;
+  }
+
+  const parsed = parseQuestionInput(req.body as Record<string, unknown>);
+  if (!parsed.input) {
+    res.status(400).json({ error: 'VALIDATION_ERROR', message: parsed.message });
+    return;
+  }
+
+  const row = quizzes.updateQuestion(
+    question.id,
+    parsed.input.text,
+    JSON.stringify(parsed.input.options),
+    parsed.input.correctOpt,
+  );
+  if (!row) {
+    res.status(404).json({ error: 'NOT_FOUND', message: 'Question not found.' });
+    return;
+  }
+  res.status(200).json(toQuestionPayload(row));
+}
+
+function deleteQuestion(req: Request, res: Response): void {
+  const quiz = quizzes.getById(String(req.params.id));
+  if (!quiz) {
+    res.status(404).json({ error: 'NOT_FOUND', message: 'Quiz not found.' });
+    return;
+  }
+
+  const question = quizzes.findQuestionById(quiz.id, String(req.params.questionId));
+  if (!question) {
+    res.status(404).json({ error: 'NOT_FOUND', message: 'Question not found.' });
+    return;
+  }
+
+  if (quizzes.countAttempts(quiz.id) > 0) {
+    res
+      .status(409)
+      .json({ error: 'QUIZ_HAS_ATTEMPTS', message: 'Quizzes with attempts cannot be edited.' });
+    return;
+  }
+
+  quizzes.deleteQuestion(question.id);
+  res.status(204).send();
+}
+
 export const adminQuizzesRouter = Router();
 adminQuizzesRouter.use(requireAuth, requireAdmin);
 adminQuizzesRouter.post('/', createQuiz);
 adminQuizzesRouter.get('/', listQuizzes);
 adminQuizzesRouter.put('/:id', updateQuiz);
 adminQuizzesRouter.delete('/:id', deleteQuiz);
+adminQuizzesRouter.get('/:id/questions', listQuestionsHandler);
+adminQuizzesRouter.post('/:id/questions', createQuestion);
+adminQuizzesRouter.put('/:id/questions/:questionId', updateQuestion);
+adminQuizzesRouter.delete('/:id/questions/:questionId', deleteQuestion);
+adminQuizzesRouter.get('/:id/leaderboard', getLeaderboard);
