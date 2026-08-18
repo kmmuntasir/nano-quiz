@@ -21,9 +21,9 @@
 | F-02 | Browse the quiz list | F-01 | Done |
 | F-03 | Start gating (active window + participation) | F-02 | Done |
 | F-04 | Quiz taking flow (one question at a time) | F-03 | Done |
-| F-05 | Per-question timer & auto-advance | F-04 | New |
-| F-06 | Final submit & retry | F-04 | New |
-| F-07 | Score result screen | F-06 | New |
+| F-05 | Per-question timer & auto-advance | F-04 | Done |
+| F-06 | Final submit & retry | F-04 | Done |
+| F-07 | Score result screen | F-06 | Done |
 | F-08 | Single participation lock | F-06 | New |
 | F-09 | Abandon & restart (no mid-way storage) | F-04 | New |
 | F-10 | Leaderboard view | F-01 | New |
