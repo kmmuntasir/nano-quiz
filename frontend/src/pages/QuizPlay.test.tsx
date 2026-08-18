@@ -110,7 +110,7 @@ describe('QuizPlay', () => {
     await user.click(await screen.findByRole('button', { name: 'B1' }));
     await user.click(await screen.findByRole('button', { name: 'C2' }));
 
-    expect(await screen.findByText('Quiz complete')).toBeInTheDocument();
+    expect(await screen.findByText('You scored 1 of 2')).toBeInTheDocument();
     expect(payloads).toHaveLength(1);
     expect(payloads[0].seed).toBe(SESSION.seed);
     expect(payloads[0].answers).toEqual([1, 2]);
@@ -125,8 +125,8 @@ describe('QuizPlay', () => {
     await user.click(await screen.findByRole('button', { name: 'A1' }));
     await user.click(await screen.findByRole('button', { name: 'A2' }));
 
-    expect(await screen.findByText('Quiz complete')).toBeInTheDocument();
-    expect(screen.getByText('You scored 1 of 2')).toBeInTheDocument();
+    expect(await screen.findByText('You scored 1 of 2')).toBeInTheDocument();
+    expect(screen.getByText('Quiz complete')).toBeInTheDocument();
   });
 
   it('should_auto_retry_and_complete_when_submit_fails_then_succeeds', async () => {
@@ -152,7 +152,7 @@ describe('QuizPlay', () => {
     });
 
     expect(failures).toBe(3);
-    expect(await screen.findByText('Quiz complete')).toBeInTheDocument();
+    expect(await screen.findByText('You scored 1 of 2')).toBeInTheDocument();
   });
 
   it('should_show_manual_retry_when_all_auto_retries_exhausted', async () => {
@@ -184,7 +184,7 @@ describe('QuizPlay', () => {
       await vi.runAllTimersAsync();
     });
 
-    expect(await screen.findByText('Quiz complete')).toBeInTheDocument();
+    expect(await screen.findByText('You scored 1 of 2')).toBeInTheDocument();
   });
 
   it('should_show_alert_and_retry_when_question_fetch_fails', async () => {
@@ -244,7 +244,7 @@ describe('QuizPlay', () => {
         await vi.advanceTimersByTimeAsync(SHORT_TIME_LIMIT_MS);
       });
 
-      expect(await screen.findByText('Quiz complete')).toBeInTheDocument();
+      expect(await screen.findByText('You scored 1 of 2')).toBeInTheDocument();
       expect(payloads).toHaveLength(1);
       expect(payloads[0].answers).toEqual([-1, -1]);
       expect(payloads[0].answers).toHaveLength(SHORT_SESSION.questionCount);
@@ -270,7 +270,7 @@ describe('QuizPlay', () => {
 
       await user.click(screen.getByRole('button', { name: 'B2' }));
 
-      expect(await screen.findByText('Quiz complete')).toBeInTheDocument();
+      expect(await screen.findByText('You scored 1 of 2')).toBeInTheDocument();
       expect(payloads[0].answers).toEqual([0, 1]);
     });
 
@@ -318,7 +318,7 @@ describe('QuizPlay', () => {
       });
       await user.click(await screen.findByRole('button', { name: 'C2' }));
 
-      expect(await screen.findByText('Quiz complete')).toBeInTheDocument();
+      expect(await screen.findByText('You scored 1 of 2')).toBeInTheDocument();
       expect(payloads[0].answers).toEqual([-1, 2]);
     });
   });

@@ -8,6 +8,7 @@ import { ThemeProvider } from './contexts/ThemeContext';
 const QuizList = lazy(() => import('./pages/QuizList.tsx'));
 const Login = lazy(() => import('./pages/Login.tsx'));
 const QuizPlay = lazy(() => import('./pages/QuizPlay.tsx'));
+const Completion = lazy(() => import('./pages/Completion.tsx'));
 
 function PageLoadingFallback() {
   return (
@@ -39,6 +40,14 @@ function App() {
                   element={
                     <ProtectedRoute>
                       <QuizPlay />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/quizzes/:id/completion"
+                  element={
+                    <ProtectedRoute>
+                      <Completion />
                     </ProtectedRoute>
                   }
                 />

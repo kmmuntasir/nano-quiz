@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { ApiError, fetchQuestion, submitQuiz } from '../api/client';
-import type { Question, QuizSession, SubmitResult } from '../api/types';
+import type { Question, QuizSession } from '../api/types';
 import QuestionDisplay from '../components/QuestionDisplay';
 import TimerCountdown from '../components/TimerCountdown';
 import TopBar from '../components/TopBar';
@@ -25,6 +25,7 @@ function sleep(ms: number): Promise<void> {
 
 export default function QuizPlay() {
   const location = useLocation();
+  const navigate = useNavigate();
   const state = location.state as QuizPlayLocationState | null;
   const session = state?.session;
 
@@ -34,7 +35,7 @@ export default function QuizPlay() {
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const [submitState, setSubmitState] = useState<SubmitState>('idle');
-  const [result, setResult] = useState<SubmitResult | null>(null);
+  const [navigated, setNavigated] = useState(false);
   const startedAt = useRef(0);
 
   useEffect(() => {
@@ -80,8 +81,9 @@ export default function QuizPlay() {
       for (let attempt = 0; attempt <= SUBMIT_MAX_RETRIES; attempt += 1) {
         try {
           const submitted = await submitQuiz(session.quizId, payload);
-          setResult(submitted);
+          setNavigated(true);
           setSubmitState('idle');
+          navigate(`/quizzes/${session.quizId}/completion`, { state: { result: submitted } });
           return;
         } catch (cause) {
           const isNetworkFailure = cause instanceof ApiError && cause.status === 0;
@@ -94,7 +96,7 @@ export default function QuizPlay() {
         }
       }
     },
-    [session],
+    [navigate, session],
   );
 
   const handleAnswer = useCallback(
@@ -118,7 +120,7 @@ export default function QuizPlay() {
   );
 
   const handleTimeout = useCallback(() => {
-    if (session === undefined || submitState !== 'idle' || result !== null) {
+    if (session === undefined || submitState !== 'idle' || navigated) {
       return;
     }
     const nextAnswers = [...answers];
@@ -132,11 +134,11 @@ export default function QuizPlay() {
       return;
     }
     void doSubmit(nextAnswers);
-  }, [answers, doSubmit, result, seq, session, submitState]);
+  }, [answers, doSubmit, navigated, seq, session, submitState]);
 
   const { remaining } = useQuizTimer({
     seconds: session?.timeLimitSeconds ?? 0,
-    active: submitState === 'idle' && result === null,
+    active: submitState === 'idle' && !navigated,
     resetKey: seq,
     onTimeout: handleTimeout,
   });
@@ -145,25 +147,14 @@ export default function QuizPlay() {
     return <Navigate to="/" replace />;
   }
 
-  const isLoading = question === null && error === null && result === null;
+  const isLoading = question === null && error === null && submitState === 'idle';
 
   return (
     <div className="flex min-h-screen flex-col bg-brand-50 font-sans dark:bg-slate-950">
       <TopBar />
       <main className="flex flex-1 flex-col items-center p-page">
         <div className="flex w-full max-w-md flex-col gap-4">
-          {result !== null && (
-            <section className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
-              <h1 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-                Quiz complete
-              </h1>
-              <p className="text-sm text-slate-600 dark:text-slate-400">
-                You scored {result.correctCount} of {result.totalQuestions}
-              </p>
-            </section>
-          )}
-
-          {result === null && submitState === 'submitting' && (
+          {submitState === 'submitting' && (
             <section className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
               <p
                 className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400"
@@ -178,7 +169,7 @@ export default function QuizPlay() {
             </section>
           )}
 
-          {result === null && submitState === 'failed' && (
+          {submitState === 'failed' && (
             <section className="flex flex-col items-center gap-4 py-8 text-center">
               <p role="alert" className="text-sm text-slate-600 dark:text-slate-300">
                 {SUBMIT_FAILED_MESSAGE}
@@ -193,7 +184,7 @@ export default function QuizPlay() {
             </section>
           )}
 
-          {result === null && submitState === 'idle' && error !== null && (
+          {submitState === 'idle' && error !== null && (
             <div className="flex flex-col items-center gap-4 py-8 text-center">
               <p role="alert" className="text-sm text-slate-600 dark:text-slate-300">
                 {error}
@@ -208,7 +199,7 @@ export default function QuizPlay() {
             </div>
           )}
 
-          {result === null && submitState === 'idle' && error === null && isLoading && (
+          {submitState === 'idle' && error === null && isLoading && (
             <div
               className="h-48 animate-pulse rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
               aria-busy="true"
@@ -216,7 +207,7 @@ export default function QuizPlay() {
             />
           )}
 
-          {result === null && submitState === 'idle' && error === null && question !== null && (
+          {submitState === 'idle' && error === null && question !== null && (
             <>
               <TimerCountdown remaining={remaining} />
               <QuestionDisplay question={question} onAnswer={handleAnswer} />
