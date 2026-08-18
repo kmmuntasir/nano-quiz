@@ -24,9 +24,9 @@
 | F-05 | Per-question timer & auto-advance | F-04 | Done |
 | F-06 | Final submit & retry | F-04 | Done |
 | F-07 | Score result screen | F-06 | Done |
-| F-08 | Single participation lock | F-06 | New |
-| F-09 | Abandon & restart (no mid-way storage) | F-04 | New |
-| F-10 | Leaderboard view | F-01 | New |
+| F-08 | Single participation lock | F-06 | Done |
+| F-09 | Abandon & restart (no mid-way storage) | F-04 | Done |
+| F-10 | Leaderboard view | F-01 | Done |
 
 ### Admin features
 
