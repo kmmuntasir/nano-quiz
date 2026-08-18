@@ -6,7 +6,7 @@ import { db } from '../db/index.js';
 import { quizzes } from '../db/quizzes.js';
 import type { QuizListRow, QuizRow } from '../db/quizzes.js';
 import { requireAuth } from '../middleware/auth.js';
-import { deriveQuestionOrder } from '../utils/shuffle.js';
+import { deriveQuestionOrder, deriveStratifiedOrder } from '../utils/shuffle.js';
 import { logger } from '../utils/logger.js';
 
 interface QuizListItem {
@@ -97,6 +97,28 @@ function startQuiz(req: Request, res: Response): void {
 // Matches randomBytes(5).toString('hex') issued by startQuiz.
 const SEED_PATTERN = /^[0-9a-f]{10}$/;
 
+// Stratified selection ratio: round(0.4 * questionCount) from the faq pool.
+const FAQ_RATIO = 0.4;
+
+// Shared seed→order derivation. Both getQuestion and submitQuiz call this so
+// their orders stay byte-identical. Stratified only when the bank is genuinely
+// mixed-category AND each pool can supply its quota; otherwise a plain
+// unstratified shuffle of the full bank (no behavior change vs. single-category
+// banks, no new 409s — the start gate stays total-bank based).
+function deriveQuizOrder(seed: string, quizId: string, questionCount: number): string[] {
+  const pools = quizzes.listQuestionIdsByCategory(quizId);
+  const faqQuota = Math.round(FAQ_RATIO * questionCount);
+  const stratifiable =
+    pools.faq.length > 0 &&
+    pools.general.length > 0 &&
+    pools.faq.length >= faqQuota &&
+    pools.general.length >= questionCount - faqQuota;
+  if (stratifiable) {
+    return deriveStratifiedOrder(seed, pools.faq, pools.general, questionCount, faqQuota);
+  }
+  return deriveQuestionOrder(seed, quizzes.listQuestionIds(quizId), questionCount);
+}
+
 interface QuestionPayload {
   seq: number;
   total: number;
@@ -139,7 +161,7 @@ function getQuestion(req: Request, res: Response): void {
   }
 
   // Deliberately NO active-window gate: in-flight attempts continue past end_at.
-  const order = deriveQuestionOrder(seed, quizzes.listQuestionIds(quiz.id), quiz.questionCount);
+  const order = deriveQuizOrder(seed, quiz.id, quiz.questionCount);
   const question = quizzes.getQuestionById(quiz.id, order[seqNumber - 1]);
   if (!question) {
     res
@@ -245,7 +267,7 @@ function submitQuiz(req: Request, res: Response): void {
   }
 
   // Byte-identical derivation to getQuestion.
-  const order = deriveQuestionOrder(seed, quizzes.listQuestionIds(quiz.id), quiz.questionCount);
+  const order = deriveQuizOrder(seed, quiz.id, quiz.questionCount);
   if (order.length !== quiz.questionCount) {
     res
       .status(403)

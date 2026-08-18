@@ -41,3 +41,31 @@ export function deriveQuestionOrder(
   }
   return shuffled.slice(0, count);
 }
+
+// Stratified 40/60 selection: seeded Fisher-Yates over each category pool,
+// take the quota prefix from each, then seeded-shuffle the combined list.
+// One rng stream, fixed order of operations — same seed always yields the
+// same questions in the same order (question fetch and scoring share this).
+export function deriveStratifiedOrder(
+  seed: string,
+  faqIds: string[],
+  generalIds: string[],
+  count: number,
+  faqQuota: number,
+): string[] {
+  const rng = mulberry32(hashSeedToUint32(seed));
+  const pick = (pool: string[], quota: number): string[] => {
+    const shuffled = [...pool];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(rng() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled.slice(0, quota);
+  };
+  const combined = [...pick(faqIds, faqQuota), ...pick(generalIds, count - faqQuota)];
+  for (let i = combined.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [combined[i], combined[j]] = [combined[j], combined[i]];
+  }
+  return combined;
+}

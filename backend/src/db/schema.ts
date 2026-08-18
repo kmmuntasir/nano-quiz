@@ -28,6 +28,7 @@ export const QUESTIONS_TABLE_DDL = `CREATE TABLE IF NOT EXISTS questions (
   prompt TEXT NOT NULL,
   options TEXT NOT NULL,
   correct_opt INTEGER NOT NULL,
+  category TEXT NOT NULL DEFAULT 'general',
   UNIQUE (quiz_id, seq)
 );`;
 
@@ -46,10 +47,23 @@ export const QUESTIONS_QUIZ_ID_INDEX_DDL =
 export const PARTICIPATIONS_QUIZ_ID_INDEX_DDL =
   'CREATE INDEX IF NOT EXISTS idx_participations_quiz_id ON participations(quiz_id);';
 
+interface TableColumnRow {
+  name: string;
+}
+
+// Idempotent migration for DBs created before the category column existed.
+function migrateQuestionsCategory(db: Database.Database): void {
+  const columns = db.prepare<[], TableColumnRow>('PRAGMA table_info(questions)').all();
+  if (!columns.some((column) => column.name === 'category')) {
+    db.exec("ALTER TABLE questions ADD COLUMN category TEXT NOT NULL DEFAULT 'general'");
+  }
+}
+
 export function applySchema(db: Database.Database): void {
   db.exec(USERS_TABLE_DDL);
   db.exec(QUIZZES_TABLE_DDL);
   db.exec(QUESTIONS_TABLE_DDL);
+  migrateQuestionsCategory(db);
   db.exec(PARTICIPATIONS_TABLE_DDL);
   db.exec(QUESTIONS_QUIZ_ID_INDEX_DDL);
   db.exec(PARTICIPATIONS_QUIZ_ID_INDEX_DDL);

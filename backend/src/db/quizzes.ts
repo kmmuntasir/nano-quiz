@@ -141,6 +141,17 @@ const selectQuestionIdsStmt = db.prepare<QuizIdParam, QuestionIdRow>(
    ORDER BY seq`,
 );
 
+interface QuestionIdCategoryRow extends QuestionIdRow {
+  category: string;
+}
+
+const selectQuestionIdsByCategoryStmt = db.prepare<QuizIdParam, QuestionIdCategoryRow>(
+  `SELECT id, category
+   FROM questions
+   WHERE quiz_id = @quizId
+   ORDER BY seq`,
+);
+
 const selectQuestionByIdStmt = db.prepare<QuestionIdParam, QuestionRow>(
   `SELECT
      id,
@@ -296,6 +307,7 @@ const selectAdminQuizzesStmt = db.prepare<Record<string, never>, AdminQuizRow>(
 
 export interface AdminQuestionRow extends QuestionRow {
   seq: number;
+  category: string;
 }
 
 const selectAdminQuestionsStmt = db.prepare<QuizIdParam, AdminQuestionRow>(
@@ -304,7 +316,8 @@ const selectAdminQuestionsStmt = db.prepare<QuizIdParam, AdminQuestionRow>(
      seq,
      prompt,
      options,
-     correct_opt AS correctOpt
+     correct_opt AS correctOpt,
+     category
    FROM questions
    WHERE quiz_id = @quizId
    ORDER BY seq`,
@@ -316,7 +329,8 @@ const selectAdminQuestionByIdStmt = db.prepare<QuestionIdParam, AdminQuestionRow
      seq,
      prompt,
      options,
-     correct_opt AS correctOpt
+     correct_opt AS correctOpt,
+     category
    FROM questions
    WHERE quiz_id = @quizId AND id = @questionId`,
 );
@@ -328,17 +342,19 @@ interface InsertQuestionParams {
   prompt: string;
   options: string;
   correctOpt: number;
+  category: string;
 }
 
 const insertQuestionStmt = db.prepare<InsertQuestionParams, AdminQuestionRow>(
-  `INSERT INTO questions (id, quiz_id, seq, prompt, options, correct_opt)
-   VALUES (@questionId, @quizId, @seq, @prompt, @options, @correctOpt)
+  `INSERT INTO questions (id, quiz_id, seq, prompt, options, correct_opt, category)
+   VALUES (@questionId, @quizId, @seq, @prompt, @options, @correctOpt, @category)
    RETURNING
      id,
      seq,
      prompt,
      options,
-     correct_opt AS correctOpt`,
+     correct_opt AS correctOpt,
+     category`,
 );
 
 interface UpdateQuestionParams {
@@ -346,20 +362,23 @@ interface UpdateQuestionParams {
   prompt: string;
   options: string;
   correctOpt: number;
+  category: string;
 }
 
 const updateQuestionStmt = db.prepare<UpdateQuestionParams, AdminQuestionRow>(
   `UPDATE questions
    SET prompt = @prompt,
        options = @options,
-       correct_opt = @correctOpt
+       correct_opt = @correctOpt,
+       category = @category
    WHERE id = @questionId
    RETURNING
      id,
      seq,
      prompt,
      options,
-     correct_opt AS correctOpt`,
+     correct_opt AS correctOpt,
+     category`,
 );
 
 interface QuestionIdOnlyParam {
@@ -403,6 +422,14 @@ export const quizzes = {
 
   listQuestionIds(quizId: string): string[] {
     return selectQuestionIdsStmt.all({ quizId }).map((row) => row.id);
+  },
+
+  listQuestionIdsByCategory(quizId: string): { faq: string[]; general: string[] } {
+    const pools = { faq: [] as string[], general: [] as string[] };
+    for (const row of selectQuestionIdsByCategoryStmt.all({ quizId })) {
+      (row.category === 'faq' ? pools.faq : pools.general).push(row.id);
+    }
+    return pools;
   },
 
   getQuestionById(quizId: string, questionId: string): QuestionRow | undefined {
@@ -465,6 +492,7 @@ export const quizzes = {
     prompt: string,
     optionsJson: string,
     correctOpt: number,
+    category: string,
   ): AdminQuestionRow {
     return insertQuestionStmt.get({
       quizId,
@@ -473,6 +501,7 @@ export const quizzes = {
       prompt,
       options: optionsJson,
       correctOpt,
+      category,
     })!;
   },
 
@@ -481,8 +510,15 @@ export const quizzes = {
     prompt: string,
     optionsJson: string,
     correctOpt: number,
+    category: string,
   ): AdminQuestionRow | undefined {
-    return updateQuestionStmt.get({ questionId, prompt, options: optionsJson, correctOpt });
+    return updateQuestionStmt.get({
+      questionId,
+      prompt,
+      options: optionsJson,
+      correctOpt,
+      category,
+    });
   },
 
   deleteQuestion(questionId: string): void {

@@ -106,7 +106,7 @@ describe('GET /api/admin/quizzes/:id/questions', () => {
 
     expect(res.status).toBe(200);
     expect(res.body).toHaveLength(3);
-    expect(Object.keys(res.body[0]).sort()).toEqual(['correctOpt', 'id', 'options', 'text']);
+    expect(Object.keys(res.body[0]).sort()).toEqual(['category', 'correctOpt', 'id', 'options', 'text']);
     expect(res.body.map((q: { text: string }) => q.text)).toEqual([
       'Prompt 1?',
       'Prompt 2?',
@@ -152,10 +152,11 @@ describe('POST /api/admin/quizzes/:id/questions', () => {
     const res = await adminRequest('post', '/api/admin/quizzes/aq-post-create/questions', validQuestionBody);
 
     expect(res.status).toBe(201);
-    expect(Object.keys(res.body).sort()).toEqual(['correctOpt', 'id', 'options', 'text']);
+    expect(Object.keys(res.body).sort()).toEqual(['category', 'correctOpt', 'id', 'options', 'text']);
     expect(res.body.text).toBe(validQuestionBody.text);
     expect(res.body.options).toEqual(['Berlin', 'Paris', 'Madrid']);
     expect(res.body.correctOpt).toBe(1);
+    expect(res.body.category).toBe('general'); // defaults when omitted
 
     // Appended after the existing bank (seq 2).
     const list = await adminRequest('get', '/api/admin/quizzes/aq-post-create/questions');
@@ -241,6 +242,30 @@ describe('POST /api/admin/quizzes/:id/questions', () => {
     expect(res.status).toBe(400);
     expect(res.body.error).toBe('VALIDATION_ERROR');
   });
+
+  it('should_return_201_with_faq_category_when_category_is_faq', async () => {
+    seedQuiz('aq-post-cat', 1);
+
+    const res = await adminRequest('post', '/api/admin/quizzes/aq-post-cat/questions', {
+      ...validQuestionBody,
+      category: 'faq',
+    });
+
+    expect(res.status).toBe(201);
+    expect(res.body.category).toBe('faq');
+  });
+
+  it('should_return_400_when_category_is_not_faq_or_general', async () => {
+    seedQuiz('aq-post-val');
+
+    const res = await adminRequest('post', '/api/admin/quizzes/aq-post-val/questions', {
+      ...validQuestionBody,
+      category: 'trivia',
+    });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe('VALIDATION_ERROR');
+  });
 });
 
 describe('PUT /api/admin/quizzes/:id/questions/:questionId', () => {
@@ -277,7 +302,7 @@ describe('PUT /api/admin/quizzes/:id/questions/:questionId', () => {
     );
 
     expect(res.status).toBe(200);
-    expect(Object.keys(res.body).sort()).toEqual(['correctOpt', 'id', 'options', 'text']);
+    expect(Object.keys(res.body).sort()).toEqual(['category', 'correctOpt', 'id', 'options', 'text']);
     expect(res.body.id).toBe('aq-put-ok-q1');
     expect(res.body.text).toBe(validQuestionBody.text);
     expect(res.body.options).toEqual(['Berlin', 'Paris', 'Madrid']);

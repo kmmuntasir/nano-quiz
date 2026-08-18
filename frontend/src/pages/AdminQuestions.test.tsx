@@ -31,8 +31,9 @@ const QUESTIONS: AdminQuestion[] = [
     text: 'Capital of France?',
     options: ['Paris', 'London'],
     correctOpt: 0,
+    category: 'general',
   },
-  { id: 'qu2', text: '2 + 2?', options: ['3', '4'], correctOpt: 1 },
+  { id: 'qu2', text: '2 + 2?', options: ['3', '4'], correctOpt: 1, category: 'faq' },
 ];
 
 let createdInputs: QuestionInput[] = [];
@@ -160,6 +161,8 @@ describe('AdminQuestions', () => {
     expect(screen.getByText('2/2 questions')).toBeInTheDocument();
     expect(screen.getByText('Playable')).toBeInTheDocument();
     expect(screen.getByText('Capital of France?')).toBeInTheDocument();
+    expect(screen.getAllByText('general').length).toBeGreaterThan(0);
+    expect(screen.getByText('faq')).toBeInTheDocument();
     const correctParis = screen.getByText('Paris').closest('li');
     expect(correctParis).toHaveTextContent('Correct');
     expect(screen.getByText('4').closest('li')).toHaveTextContent('Correct');
@@ -207,6 +210,33 @@ describe('AdminQuestions', () => {
     expect(createdInputs[0].correctOpt).toBe(0);
     expect(screen.getByText('3/2 questions')).toBeInTheDocument();
     expect(screen.getByText('Pacific').textContent).not.toContain('Correct');
+  });
+
+  it('should_send_selected_category_when_adding', async () => {
+    mockAdmin([QUIZ], QUESTIONS);
+    mockCreateQuestion();
+
+    renderQuestionsPage('/admin/quizzes/qz1/questions');
+    await screen.findByText('Capital of France?');
+
+    const form = getAddForm();
+    await userEvent.selectOptions(
+      within(form).getByLabelText('Category'),
+      'faq',
+    );
+    await userEvent.type(
+      within(form).getByLabelText('Question text'),
+      'Vacation days?',
+    );
+    const optionInputs = within(form).getAllByRole('textbox');
+    await userEvent.type(optionInputs[1], '15');
+    await userEvent.type(optionInputs[2], '20');
+    await userEvent.click(
+      within(form).getByRole('button', { name: 'Add question' }),
+    );
+
+    expect(await screen.findByText('Vacation days?')).toBeInTheDocument();
+    expect(createdInputs[0].category).toBe('faq');
   });
 
   it('should_enforce_minimum_two_options_when_adding', async () => {
@@ -294,6 +324,7 @@ describe('AdminQuestions', () => {
           text: 'Capital of Germany?',
           options: ['Berlin', 'London'],
           correctOpt: 0,
+          category: 'general',
         },
       },
     ]);

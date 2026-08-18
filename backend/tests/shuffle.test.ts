@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   deriveQuestionOrder,
+  deriveStratifiedOrder,
   hashSeedToUint32,
   mulberry32,
 } from '../src/utils/shuffle.js';
@@ -72,5 +73,40 @@ describe('deriveQuestionOrder', () => {
     const order = deriveQuestionOrder('a1b2c3d4e5', IDS, IDS.length);
     expect(order).toHaveLength(IDS.length);
     expect([...order].sort()).toEqual([...IDS].sort());
+  });
+});
+
+describe('deriveStratifiedOrder', () => {
+  const FAQ = ['f1', 'f2', 'f3', 'f4', 'f5'];
+  const GENERAL = ['g1', 'g2', 'g3', 'g4', 'g5', 'g6', 'g7', 'g8'];
+
+  it('should_preserve_category_ratio_when_pools_are_large_enough', () => {
+    const order = deriveStratifiedOrder('a1b2c3d4e5', FAQ, GENERAL, 10, 4);
+    expect(order).toHaveLength(10);
+    expect(order.filter((id) => FAQ.includes(id))).toHaveLength(4);
+    expect(order.filter((id) => GENERAL.includes(id))).toHaveLength(6);
+    expect(new Set(order).size).toBe(10);
+  });
+
+  it('should_return_identical_order_when_seed_is_the_same', () => {
+    const first = deriveStratifiedOrder('a1b2c3d4e5', FAQ, GENERAL, 10, 4);
+    const second = deriveStratifiedOrder('a1b2c3d4e5', FAQ, GENERAL, 10, 4);
+    expect(first).toEqual(second);
+  });
+
+  it('should_return_different_orders_when_seeds_differ', () => {
+    const first = deriveStratifiedOrder('0000000001', FAQ, GENERAL, 10, 4);
+    const second = deriveStratifiedOrder('abcdef1234', FAQ, GENERAL, 10, 4);
+    expect(first).not.toEqual(second);
+  });
+
+  it('should_return_quota_prefixes_when_pools_are_larger_than_quotas', () => {
+    const order = deriveStratifiedOrder('a1b2c3d4e5', FAQ, GENERAL, 10, 4);
+    expect(order).toHaveLength(10);
+    expect([...FAQ, ...GENERAL]).toEqual(expect.arrayContaining(order));
+  });
+
+  it('should_return_empty_array_when_both_pools_are_empty', () => {
+    expect(deriveStratifiedOrder('a1b2c3d4e5', [], [], 0, 0)).toEqual([]);
   });
 });

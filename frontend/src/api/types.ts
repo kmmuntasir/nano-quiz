@@ -52,11 +52,14 @@ export interface AdminQuiz {
   attemptCount: number;
 }
 
+export type QuestionCategory = 'faq' | 'general';
+
 export interface AdminQuestion {
   id: string;
   text: string;
   options: string[];
   correctOpt: number;
+  category: QuestionCategory;
 }
 
 export interface QuizInput {
@@ -72,6 +75,7 @@ export interface QuestionInput {
   text: string;
   options: string[];
   correctOpt: number;
+  category: QuestionCategory;
 }
 
 export interface SubmitResult {

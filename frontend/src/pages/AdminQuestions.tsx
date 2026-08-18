@@ -8,7 +8,7 @@ import {
   fetchQuestions,
   updateQuestion,
 } from '../api/client';
-import type { AdminQuestion, QuestionInput } from '../api/types';
+import type { AdminQuestion, QuestionCategory, QuestionInput } from '../api/types';
 import TopBar from '../components/TopBar';
 
 const MIN_OPTIONS = 2;
@@ -27,6 +27,7 @@ interface FormState {
   text: string;
   options: string[];
   correctOpt: number;
+  category: QuestionCategory;
 }
 
 interface FormErrors {
@@ -34,7 +35,12 @@ interface FormErrors {
   options?: string;
 }
 
-const EMPTY_FORM: FormState = { text: '', options: ['', ''], correctOpt: 0 };
+const EMPTY_FORM: FormState = {
+  text: '',
+  options: ['', ''],
+  correctOpt: 0,
+  category: 'general',
+};
 
 function validate(form: FormState): FormErrors {
   const errors: FormErrors = {};
@@ -54,6 +60,7 @@ function toInput(form: FormState): QuestionInput {
     text: form.text.trim(),
     options: form.options.map((option) => option.trim()),
     correctOpt: form.correctOpt,
+    category: form.category,
   };
 }
 
@@ -62,6 +69,7 @@ function formStateFromQuestion(question: AdminQuestion): FormState {
     text: question.text,
     options: [...question.options],
     correctOpt: question.correctOpt,
+    category: question.category,
   };
 }
 
@@ -102,7 +110,7 @@ function QuestionForm({
           : current.correctOpt,
         options.length - 1,
       );
-      return { text: current.text, options, correctOpt };
+      return { ...current, options, correctOpt };
     });
   }
 
@@ -161,6 +169,25 @@ function QuestionForm({
         {errors.text !== undefined && (
           <p className={FIELD_ERROR_CLASS}>{errors.text}</p>
         )}
+      </div>
+      <div>
+        <label htmlFor={`${formId}-category`} className={LABEL_CLASS}>
+          Category
+        </label>
+        <select
+          id={`${formId}-category`}
+          value={form.category}
+          onChange={(event) =>
+            setForm((current) => ({
+              ...current,
+              category: event.target.value as QuestionCategory,
+            }))
+          }
+          className={INPUT_CLASS}
+        >
+          <option value="general">General</option>
+          <option value="faq">FAQ</option>
+        </select>
       </div>
       <div>
         <span className={LABEL_CLASS}>Options</span>
@@ -302,9 +329,20 @@ function QuestionItem({
   return (
     <li className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-white p-card dark:border-slate-800 dark:bg-slate-900">
       <div className="flex items-start justify-between gap-4">
-        <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 md:text-base">
-          {question.text}
-        </p>
+        <div className="flex flex-col gap-1">
+          <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 md:text-base">
+            {question.text}
+          </p>
+          <span
+            className={`${BADGE_BASE_CLASS} w-fit uppercase ${
+              question.category === 'faq'
+                ? 'bg-brand-100 text-brand-700 dark:bg-brand-900 dark:text-brand-300'
+                : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
+            }`}
+          >
+            {question.category}
+          </span>
+        </div>
         {!locked && (
           <div className="flex shrink-0 items-center gap-2 text-sm">
             <button

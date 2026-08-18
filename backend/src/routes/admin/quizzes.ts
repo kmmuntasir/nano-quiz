@@ -176,6 +176,7 @@ interface AdminQuestionPayload {
   text: string;
   options: string[];
   correctOpt: number;
+  category: string;
 }
 
 function toQuestionPayload(row: AdminQuestionRow): AdminQuestionPayload {
@@ -184,13 +185,17 @@ function toQuestionPayload(row: AdminQuestionRow): AdminQuestionPayload {
     text: row.prompt,
     options: JSON.parse(row.options) as string[],
     correctOpt: row.correctOpt,
+    category: row.category,
   };
 }
+
+type QuestionCategory = 'faq' | 'general';
 
 interface QuestionInput {
   text: string;
   options: string[];
   correctOpt: number;
+  category: QuestionCategory;
 }
 
 interface ParsedQuestionInput {
@@ -225,7 +230,12 @@ function parseQuestionInput(body: Record<string, unknown>): ParsedQuestionInput 
     };
   }
 
-  return { input: { text, options, correctOpt } };
+  const rawCategory = body.category ?? 'general';
+  if (rawCategory !== 'faq' && rawCategory !== 'general') {
+    return { message: "category must be either 'faq' or 'general'." };
+  }
+
+  return { input: { text, options, correctOpt, category: rawCategory } };
 }
 
 function listQuestionsHandler(req: Request, res: Response): void {
@@ -259,6 +269,7 @@ function createQuestion(req: Request, res: Response): void {
     parsed.input.text,
     JSON.stringify(parsed.input.options),
     parsed.input.correctOpt,
+    parsed.input.category,
   );
   res.status(201).json(toQuestionPayload(row));
 }
@@ -294,6 +305,7 @@ function updateQuestion(req: Request, res: Response): void {
     parsed.input.text,
     JSON.stringify(parsed.input.options),
     parsed.input.correctOpt,
+    parsed.input.category,
   );
   if (!row) {
     res.status(404).json({ error: 'NOT_FOUND', message: 'Question not found.' });
