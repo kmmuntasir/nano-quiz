@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ApiError, startQuiz } from '../api/client';
 import type { Quiz, QuizSession } from '../api/types';
+import { useAuth } from '../hooks/useAuth';
 import { formatRelativeTime } from '../hooks/useRelativeTime';
 
 export interface StartQuizButtonProps {
@@ -37,6 +38,7 @@ export default function StartQuizButton({
   onStarted,
   onStartError,
 }: StartQuizButtonProps) {
+  const { isAdmin } = useAuth();
   const [starting, setStarting] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
   const canStart = quiz.canStart;
@@ -65,7 +67,7 @@ export default function StartQuizButton({
         onClick={() => void handleClick()}
         className="w-full rounded-md bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 dark:disabled:bg-slate-700 dark:disabled:text-slate-400"
       >
-        {starting ? 'Starting…' : 'Start quiz'}
+        {starting ? 'Starting…' : isAdmin ? 'Preview quiz' : 'Start quiz'}
       </button>
       {reason !== null && (
         <p className="text-xs text-slate-500 dark:text-slate-400">{reason}</p>

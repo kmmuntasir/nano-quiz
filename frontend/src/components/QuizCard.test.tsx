@@ -1,6 +1,7 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import QuizCard from './QuizCard';
 import type { Quiz } from '../api/types';
+import { renderWithAuth } from '../test/utils';
 
 const NOW = new Date('2026-08-18T12:00:00Z');
 
@@ -22,7 +23,7 @@ function buildQuiz(overrides: Partial<Quiz> = {}): Quiz {
 
 describe('QuizCard', () => {
   it('should_render_title_description_and_meta_when_quiz_is_live', () => {
-    render(<QuizCard quiz={buildQuiz()} now={NOW} />);
+    renderWithAuth(<QuizCard quiz={buildQuiz()} now={NOW} />);
 
     expect(screen.getByRole('heading', { name: 'General Knowledge' })).toBeInTheDocument();
     expect(screen.getByText('Ten quick questions.')).toBeInTheDocument();
@@ -33,7 +34,7 @@ describe('QuizCard', () => {
   });
 
   it('should_render_upcoming_badge_when_now_is_before_start_at', () => {
-    render(
+    renderWithAuth(
       <QuizCard
         quiz={buildQuiz({ startAt: '2026-08-20T00:00:00Z', endAt: '2026-08-21T00:00:00Z' })}
         now={NOW}
@@ -44,7 +45,7 @@ describe('QuizCard', () => {
   });
 
   it('should_render_ended_badge_when_now_is_after_end_at', () => {
-    render(
+    renderWithAuth(
       <QuizCard
         quiz={buildQuiz({ startAt: '2026-08-10T00:00:00Z', endAt: '2026-08-15T00:00:00Z' })}
         now={NOW}
@@ -55,7 +56,7 @@ describe('QuizCard', () => {
   });
 
   it('should_render_score_line_when_user_participated', () => {
-    render(
+    renderWithAuth(
       <QuizCard
         quiz={buildQuiz({ participated: true, canStart: false, userScore: 7 })}
         now={NOW}

@@ -1,10 +1,11 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { vi } from 'vitest';
 import StartQuizButton from './StartQuizButton';
 import type { Quiz, QuizSession } from '../api/types';
 import { server } from '../test/server';
+import { renderWithAuth } from '../test/utils';
 
 const NOW = new Date('2026-08-18T12:00:00Z');
 
@@ -26,7 +27,7 @@ function buildQuiz(overrides: Partial<Quiz> = {}): Quiz {
 
 describe('StartQuizButton', () => {
   it('should_be_enabled_with_no_reason_when_quiz_can_start', () => {
-    render(<StartQuizButton quiz={buildQuiz()} now={NOW} />);
+    renderWithAuth(<StartQuizButton quiz={buildQuiz()} now={NOW} />);
 
     const button = screen.getByRole('button', { name: 'Start quiz' });
     expect(button).toBeEnabled();
@@ -34,7 +35,7 @@ describe('StartQuizButton', () => {
   });
 
   it('should_be_disabled_with_score_reason_when_participated_even_if_ended', () => {
-    render(
+    renderWithAuth(
       <StartQuizButton
         quiz={buildQuiz({
           participated: true,
@@ -53,14 +54,14 @@ describe('StartQuizButton', () => {
   });
 
   it('should_be_disabled_with_ends_in_reason_when_quiz_is_live_but_not_startable', () => {
-    render(<StartQuizButton quiz={buildQuiz({ canStart: false })} now={NOW} />);
+    renderWithAuth(<StartQuizButton quiz={buildQuiz({ canStart: false })} now={NOW} />);
 
     expect(screen.getByRole('button', { name: 'Start quiz' })).toBeDisabled();
     expect(screen.getByText('Ends in 24 hours')).toBeInTheDocument();
   });
 
   it('should_be_disabled_with_starts_reason_when_quiz_is_upcoming', () => {
-    render(
+    renderWithAuth(
       <StartQuizButton
         quiz={buildQuiz({
           canStart: false,
@@ -76,7 +77,7 @@ describe('StartQuizButton', () => {
   });
 
   it('should_be_disabled_with_ended_reason_when_quiz_window_has_passed', () => {
-    render(
+    renderWithAuth(
       <StartQuizButton
         quiz={buildQuiz({
           canStart: false,
@@ -91,6 +92,60 @@ describe('StartQuizButton', () => {
     expect(screen.getByText('Ended Aug 15')).toBeInTheDocument();
   });
 
+  it('should_be_enabled_with_preview_label_when_admin_and_quiz_ended', () => {
+    renderWithAuth(
+      <StartQuizButton
+        quiz={buildQuiz({
+          canStart: true,
+          participated: false,
+          startAt: '2026-08-10T00:00:00Z',
+          endAt: '2026-08-15T00:00:00Z',
+        })}
+        now={NOW}
+      />,
+      { isAdmin: true },
+    );
+
+    expect(screen.getByRole('button', { name: 'Preview quiz' })).toBeEnabled();
+    expect(screen.queryByRole('button', { name: 'Start quiz' })).not.toBeInTheDocument();
+    expect(screen.queryByText(/^(Starts|Ended|Ends in)/)).not.toBeInTheDocument();
+  });
+
+  it('should_be_disabled_with_reason_when_admin_and_insufficient_bank', () => {
+    renderWithAuth(
+      <StartQuizButton
+        quiz={buildQuiz({
+          canStart: false,
+          participated: false,
+          startAt: '2026-08-10T00:00:00Z',
+          endAt: '2026-08-15T00:00:00Z',
+        })}
+        now={NOW}
+      />,
+      { isAdmin: true },
+    );
+
+    expect(screen.getByRole('button', { name: 'Preview quiz' })).toBeDisabled();
+    expect(screen.getByText('Ended Aug 15')).toBeInTheDocument();
+  });
+
+  it('should_be_disabled_with_ended_reason_when_non_admin_and_quiz_ended', () => {
+    renderWithAuth(
+      <StartQuizButton
+        quiz={buildQuiz({
+          canStart: false,
+          startAt: '2026-08-10T00:00:00Z',
+          endAt: '2026-08-15T00:00:00Z',
+        })}
+        now={NOW}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: 'Start quiz' })).toBeDisabled();
+    expect(screen.getByText('Ended Aug 15')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Preview quiz' })).not.toBeInTheDocument();
+  });
+
   it('should_call_onStarted_with_session_when_start_succeeds', async () => {
     const session: QuizSession = {
       seed: 'seed-1',
@@ -103,7 +158,7 @@ describe('StartQuizButton', () => {
     );
     const onStarted = vi.fn();
     const user = userEvent.setup();
-    render(<StartQuizButton quiz={buildQuiz()} now={NOW} onStarted={onStarted} />);
+    renderWithAuth(<StartQuizButton quiz={buildQuiz()} now={NOW} onStarted={onStarted} />);
 
     await user.click(screen.getByRole('button', { name: 'Start quiz' }));
 
@@ -122,7 +177,7 @@ describe('StartQuizButton', () => {
     );
     const onStarted = vi.fn();
     const user = userEvent.setup();
-    render(<StartQuizButton quiz={buildQuiz()} now={NOW} onStarted={onStarted} />);
+    renderWithAuth(<StartQuizButton quiz={buildQuiz()} now={NOW} onStarted={onStarted} />);
 
     await user.click(screen.getByRole('button', { name: 'Start quiz' }));
 
