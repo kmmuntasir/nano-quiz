@@ -112,6 +112,65 @@ const countQuestionsStmt = db.prepare<QuizIdParam, CountRow>(
    WHERE quiz_id = @quizId`,
 );
 
+export interface QuestionRow {
+  id: string;
+  prompt: string;
+  /** JSON text of the options array — parsed at a higher layer, not here. */
+  options: string;
+  correctOpt: number;
+}
+
+interface QuestionIdParam {
+  quizId: string;
+  questionId: string;
+}
+
+interface QuestionIdRow {
+  id: string;
+}
+
+const selectQuestionIdsStmt = db.prepare<QuizIdParam, QuestionIdRow>(
+  `SELECT id
+   FROM questions
+   WHERE quiz_id = @quizId
+   ORDER BY seq`,
+);
+
+const selectQuestionByIdStmt = db.prepare<QuestionIdParam, QuestionRow>(
+  `SELECT
+     id,
+     prompt,
+     options,
+     correct_opt AS correctOpt
+   FROM questions
+   WHERE quiz_id = @quizId AND id = @questionId`,
+);
+
+interface InsertParticipationParams {
+  userId: string;
+  quizId: string;
+  score: number;
+  durationMs: number;
+}
+
+const insertParticipationStmt = db.prepare<InsertParticipationParams>(
+  `INSERT INTO participations (user_id, quiz_id, score, duration_ms)
+   VALUES (@userId, @quizId, @score, @durationMs)`,
+);
+
+export interface ParticipationRow {
+  score: number;
+  durationMs: number;
+}
+
+const selectParticipationStmt = db.prepare<ParticipationParams, ParticipationRow>(
+  `SELECT
+     score,
+     duration_ms AS durationMs
+   FROM participations
+   WHERE user_id = @userId AND quiz_id = @quizId`,
+);
+
 export const quizzes = {
   listForUser(userId: string, now: string): QuizListRow[] {
     return selectQuizzesForUserStmt.all({ userId, now });
@@ -127,5 +186,26 @@ export const quizzes = {
 
   countQuestions(quizId: string): number {
     return countQuestionsStmt.get({ quizId })!.count;
+  },
+
+  listQuestionIds(quizId: string): string[] {
+    return selectQuestionIdsStmt.all({ quizId }).map((row) => row.id);
+  },
+
+  getQuestionById(quizId: string, questionId: string): QuestionRow | undefined {
+    return selectQuestionByIdStmt.get({ quizId, questionId });
+  },
+
+  insertParticipation(
+    userId: string,
+    quizId: string,
+    score: number,
+    durationMs: number,
+  ): void {
+    insertParticipationStmt.run({ userId, quizId, score, durationMs });
+  },
+
+  getParticipation(userId: string, quizId: string): ParticipationRow | undefined {
+    return selectParticipationStmt.get({ userId, quizId });
   },
 };
