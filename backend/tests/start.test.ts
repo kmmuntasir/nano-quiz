@@ -73,6 +73,20 @@ function authedPost(url: string): request.Test {
   return request(app).post(url).set('Authorization', `Bearer ${token}`);
 }
 
+function authedGet(url: string): request.Test {
+  const token = jwt.sign({ userId: USER_ID, isAdmin: false }, 'test-jwt-secret', {
+    expiresIn: '2h',
+  });
+  return request(app).get(url).set('Authorization', `Bearer ${token}`);
+}
+
+function participationCount(quizId: string): number {
+  const row = db
+    .prepare('SELECT COUNT(*) AS n FROM participations WHERE user_id = ? AND quiz_id = ?')
+    .get(USER_ID, quizId) as { n: number };
+  return row.n;
+}
+
 function tableCount(table: string): number {
   return db.prepare(`SELECT COUNT(*) AS n FROM ${table}`).get() as { n: number };
 }
@@ -174,6 +188,55 @@ describe('POST /api/quizzes/:id/start', () => {
 
     expect(res.status).toBe(404);
     expect(res.body.error).toBe('NOT_FOUND');
+  });
+
+  it('should_keep_quiz_startable_when_attempt_is_abandoned_after_question_fetches', async () => {
+    insertQuiz({ id: 'q-abandon', startOffsetMs: -HOUR_MS, endOffsetMs: HOUR_MS });
+
+    const start = await authedPost('/api/quizzes/q-abandon/start');
+    expect(start.status).toBe(200);
+
+    const q1 = await authedGet(
+      `/api/quizzes/q-abandon/question/1?seed=${start.body.seed as string}`,
+    );
+    expect(q1.status).toBe(200);
+    const q2 = await authedGet(
+      `/api/quizzes/q-abandon/question/2?seed=${start.body.seed as string}`,
+    );
+    expect(q2.status).toBe(200);
+
+    const list = await authedGet('/api/quizzes');
+    expect(list.status).toBe(200);
+    const item = list.body.find((q: { id: string }) => q.id === 'q-abandon');
+    expect(item.participated).toBe(false);
+    expect(item.canStart).toBe(true);
+    expect(participationCount('q-abandon')).toBe(0);
+  });
+
+  it('should_mint_new_seed_when_starting_again_after_abandoned_attempt', async () => {
+    insertQuiz({ id: 'q-restart', startOffsetMs: -HOUR_MS, endOffsetMs: HOUR_MS });
+
+    const first = await authedPost('/api/quizzes/q-restart/start');
+    expect(first.status).toBe(200);
+    const q1 = await authedGet(
+      `/api/quizzes/q-restart/question/1?seed=${first.body.seed as string}`,
+    );
+    expect(q1.status).toBe(200);
+
+    const second = await authedPost('/api/quizzes/q-restart/start');
+
+    expect(second.status).toBe(200);
+    expect(second.body.seed).not.toBe(first.body.seed);
+  });
+
+  it('should_return_200_on_both_starts_when_no_submit_happens', async () => {
+    insertQuiz({ id: 'q-twice', startOffsetMs: -HOUR_MS, endOffsetMs: HOUR_MS });
+
+    const first = await authedPost('/api/quizzes/q-twice/start');
+    const second = await authedPost('/api/quizzes/q-twice/start');
+
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(200);
   });
 
   it('should_return_401_when_authorization_header_is_missing', async () => {

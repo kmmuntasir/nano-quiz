@@ -139,6 +139,40 @@ describe('GET /api/quizzes/:id/leaderboard', () => {
     expect(res.body.entries).toEqual([]);
   });
 
+  it('should_not_list_user_when_attempt_was_abandoned_without_submit', async () => {
+    insertQuizWithBoard();
+    // The board fixture has no question bank; start needs one to mint a seed.
+    const insertQuestionStmt = db.prepare(
+      `INSERT INTO questions (id, quiz_id, seq, prompt, options, correct_opt)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+    );
+    for (let seq = 1; seq <= 5; seq++) {
+      insertQuestionStmt.run(`lb-q${seq}`, QUIZ_ID, seq, `Prompt ${seq}?`, '["A","B"]', 0);
+    }
+    const token = jwt.sign({ userId: 'lb-viewer', isAdmin: false }, 'test-jwt-secret', {
+      expiresIn: '2h',
+    });
+
+    const start = await request(app)
+      .post(`/api/quizzes/${QUIZ_ID}/start`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(start.status).toBe(200);
+
+    const question = await request(app)
+      .get(`/api/quizzes/${QUIZ_ID}/question/1`)
+      .query({ seed: start.body.seed as string })
+      .set('Authorization', `Bearer ${token}`);
+    expect(question.status).toBe(200);
+
+    const res = await get(QUIZ_ID);
+
+    expect(res.status).toBe(200);
+    expect(res.body.total).toBe(FIXTURE_USERS.length);
+    expect(
+      res.body.entries.some((e: { name: string }) => e.name === 'Viewer'),
+    ).toBe(false);
+  });
+
   it('should_return_404_when_quiz_id_is_unknown', async () => {
     const res = await get('no-such-quiz');
 
