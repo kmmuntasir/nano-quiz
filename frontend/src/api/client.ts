@@ -5,9 +5,13 @@ import axios, {
 } from 'axios';
 import { AUTH_STORAGE_KEY } from '../contexts/auth';
 import type {
+  AdminQuestion,
+  AdminQuiz,
   LeaderboardData,
   Question,
+  QuestionInput,
   Quiz,
+  QuizInput,
   QuizSession,
   SubmitResult,
 } from './types';
@@ -133,5 +137,61 @@ export async function submitQuiz(
   payload: { seed: string; answers: number[]; elapsedMs: number },
 ): Promise<SubmitResult> {
   const { data } = await apiClient.post<SubmitResult>(`/quizzes/${quizId}/submit`, payload);
+  return data;
+}
+
+export async function adminFetchQuizzes(): Promise<AdminQuiz[]> {
+  const { data } = await apiClient.get<AdminQuiz[]>('/admin/quizzes');
+  return data;
+}
+
+export async function createQuiz(input: QuizInput): Promise<AdminQuiz> {
+  const { data } = await apiClient.post<AdminQuiz>('/admin/quizzes', input);
+  return data;
+}
+
+export async function updateQuiz(id: string, input: QuizInput): Promise<AdminQuiz> {
+  const { data } = await apiClient.put<AdminQuiz>(`/admin/quizzes/${id}`, input);
+  return data;
+}
+
+export async function deleteQuiz(id: string): Promise<void> {
+  await apiClient.delete(`/admin/quizzes/${id}`);
+}
+
+export async function fetchQuestions(quizId: string): Promise<AdminQuestion[]> {
+  const { data } = await apiClient.get<AdminQuestion[]>(`/admin/quizzes/${quizId}/questions`);
+  return data;
+}
+
+export async function createQuestion(quizId: string, input: QuestionInput): Promise<AdminQuestion> {
+  const { data } = await apiClient.post<AdminQuestion>(`/admin/quizzes/${quizId}/questions`, input);
+  return data;
+}
+
+export async function updateQuestion(
+  quizId: string,
+  questionId: string,
+  input: QuestionInput,
+): Promise<AdminQuestion> {
+  const { data } = await apiClient.put<AdminQuestion>(
+    `/admin/quizzes/${quizId}/questions/${questionId}`,
+    input,
+  );
+  return data;
+}
+
+export async function deleteQuestion(quizId: string, questionId: string): Promise<void> {
+  await apiClient.delete(`/admin/quizzes/${quizId}/questions/${questionId}`);
+}
+
+export async function adminFetchLeaderboard(
+  quizId: string,
+  page = 1,
+  pageSize = LEADERBOARD_PAGE_SIZE,
+): Promise<LeaderboardData> {
+  const { data } = await apiClient.get<LeaderboardData>(`/admin/quizzes/${quizId}/leaderboard`, {
+    params: { page, pageSize },
+  });
   return data;
 }

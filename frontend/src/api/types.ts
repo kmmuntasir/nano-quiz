@@ -40,6 +40,40 @@ export interface LeaderboardData {
   entries: LeaderboardEntry[];
 }
 
+export interface AdminQuiz {
+  id: string;
+  title: string;
+  description: string | null;
+  questionCount: number;
+  timeLimitSeconds: number;
+  startAt: string;
+  endAt: string;
+  questionBankSize: number;
+  attemptCount: number;
+}
+
+export interface AdminQuestion {
+  id: string;
+  text: string;
+  options: string[];
+  correctOpt: number;
+}
+
+export interface QuizInput {
+  title: string;
+  description: string | null;
+  questionCount: number;
+  timeLimitSeconds: number;
+  startAt: string;
+  endAt: string;
+}
+
+export interface QuestionInput {
+  text: string;
+  options: string[];
+  correctOpt: number;
+}
+
 export interface SubmitResult {
   score: number;
   totalQuestions: number;
