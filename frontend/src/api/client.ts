@@ -4,7 +4,7 @@ import axios, {
   type InternalAxiosRequestConfig,
 } from 'axios';
 import { AUTH_STORAGE_KEY } from '../contexts/auth';
-import type { Quiz, QuizSession } from './types';
+import type { Question, Quiz, QuizSession, SubmitResult } from './types';
 
 const AUTH_PATH = '/auth/google';
 
@@ -99,5 +99,20 @@ export async function fetchQuizzes(): Promise<Quiz[]> {
 
 export async function startQuiz(id: string): Promise<QuizSession> {
   const { data } = await apiClient.post<QuizSession>(`/quizzes/${id}/start`);
+  return data;
+}
+
+export async function fetchQuestion(quizId: string, seq: number, seed: string): Promise<Question> {
+  const { data } = await apiClient.get<Question>(`/quizzes/${quizId}/question/${seq}`, {
+    params: { seed },
+  });
+  return data;
+}
+
+export async function submitQuiz(
+  quizId: string,
+  payload: { seed: string; answers: number[]; elapsedMs: number },
+): Promise<SubmitResult> {
+  const { data } = await apiClient.post<SubmitResult>(`/quizzes/${quizId}/submit`, payload);
   return data;
 }

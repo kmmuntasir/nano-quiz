@@ -17,3 +17,18 @@ export interface QuizSession {
   questionCount: number;
   timeLimitSeconds: number;
 }
+
+export interface Question {
+  seq: number;
+  total: number;
+  text: string;
+  options: string[];
+}
+
+export interface SubmitResult {
+  score: number;
+  totalQuestions: number;
+  correctCount: number;
+  durationMs: number;
+  participated: boolean;
+}
