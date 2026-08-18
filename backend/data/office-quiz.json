@@ -1,0 +1,604 @@
+{
+  "questions": [
+    {
+      "num": 1,
+      "category": "faq",
+      "text": "You submitted health-claim receipts totalling BDT 4,000 this month. How much will you actually get reimbursed?",
+      "options": [
+        "BDT 2,500",
+        "BDT 2,000",
+        "BDT 4,000",
+        "BDT 1,500"
+      ],
+      "correctOpt": 1
+    },
+    {
+      "num": 2,
+      "category": "faq",
+      "text": "Who qualifies for the standard referral bonus at Exabyting?",
+      "options": [
+        "Any referred candidate who passes probation",
+        "Software engineers with over two years of post-graduation experience",
+        "Only candidates referred during an ongoing campaign",
+        "Any Exabytian referred by another employee"
+      ],
+      "correctOpt": 1
+    },
+    {
+      "num": 3,
+      "category": "faq",
+      "text": "Two employees both refer the same candidate. Who gets the referral bonus?",
+      "options": [
+        "The one with the longer tenure at Exabyting",
+        "The one whose candidate accepts the offer",
+        "The one whose referral email arrived first",
+        "The bonus is split between both"
+      ],
+      "correctOpt": 2
+    },
+    {
+      "num": 4,
+      "category": "faq",
+      "text": "What happens if you refer a candidate who is already in Exabyting's recruitment process?",
+      "options": [
+        "The referral still counts after their joining",
+        "The referral counts, but the bonus is halved",
+        "It is not considered a referral at all",
+        "HR decides case by case"
+      ],
+      "correctOpt": 2
+    },
+    {
+      "num": 5,
+      "category": "faq",
+      "text": "Under the IT Asset Incentive, which item is mandatory in your claim?",
+      "options": [
+        "A laptop stand",
+        "Headphones",
+        "A mouse pad",
+        "A USB hub"
+      ],
+      "correctOpt": 1
+    },
+    {
+      "num": 6,
+      "category": "faq",
+      "text": "If you leave Exabyting, what happens to the accessories you bought through the IT Asset Incentive?",
+      "options": [
+        "They must be returned to IT",
+        "They are bought back at 50% of the receipt value",
+        "They are personally yours \u2014 nothing to return",
+        "They must be handed over unless you replace them"
+      ],
+      "correctOpt": 2
+    },
+    {
+      "num": 7,
+      "category": "faq",
+      "text": "When can you re-claim an IT accessory under the incentive because your current one died?",
+      "options": [
+        "Anytime, up to twice a year",
+        "Only during the annual renewal window",
+        "Only if it is out of warranty and non-functional, with the old item handed to IT",
+        "Never \u2014 the incentive is one-time"
+      ],
+      "correctOpt": 2
+    },
+    {
+      "num": 8,
+      "category": "faq",
+      "text": "What is the maximum outstanding loan balance an employee can carry at any time?",
+      "options": [
+        "1.5\u00d7 their gross salary",
+        "2.4\u00d7 their gross salary",
+        "3\u00d7 their net salary",
+        "BDT 500,000 flat"
+      ],
+      "correctOpt": 1
+    },
+    {
+      "num": 9,
+      "category": "faq",
+      "text": "Your loan is approved with no other outstanding loan. By when must your first EMI installment start?",
+      "options": [
+        "The same month as disbursement",
+        "Within six months",
+        "No later than three months from initiation",
+        "Whenever the employee chooses"
+      ],
+      "correctOpt": 2
+    },
+    {
+      "num": 10,
+      "category": "faq",
+      "text": "A health-claim receipt is one and a half months old when you try to submit it. What happens?",
+      "options": [
+        "It is rejected \u2014 claims older than one month cannot proceed",
+        "It is accepted via the late-submission process, but paid with next month's salary",
+        "It is auto-carried to next month's cycle at full value",
+        "It needs the CEO's approval"
+      ],
+      "correctOpt": 1
+    },
+    {
+      "num": 11,
+      "category": "faq",
+      "text": "The office transport doesn't show up, so you commute on your own. How are you reimbursed?",
+      "options": [
+        "A flat BDT 200 per incident",
+        "BDT 10 per km, based on distance from your residence",
+        "Full CNG-receipt reimbursement",
+        "BDT 10 per km, only above 10 km"
+      ],
+      "correctOpt": 1
+    },
+    {
+      "num": 12,
+      "category": "faq",
+      "text": "You normally take the office transport, but just for one day you want to use your own vehicle. Are you eligible for the transport allowance for that day?",
+      "options": [
+        "Yes, at half rate",
+        "Yes, with your lead's approval",
+        "No",
+        "Only if the transport was full"
+      ],
+      "correctOpt": 2
+    },
+    {
+      "num": 13,
+      "category": "faq",
+      "text": "How is one day's salary calculated for the Martian (holiday work) allowance?",
+      "options": [
+        "Monthly gross \u00f7 30",
+        "Monthly gross \u00f7 22",
+        "Base salary \u00f7 26",
+        "Net salary \u00f7 20"
+      ],
+      "correctOpt": 1
+    },
+    {
+      "num": 14,
+      "category": "faq",
+      "text": "Do extra working days boost your Supernova Bonus attendance?",
+      "options": [
+        "Yes, each extra day counts double",
+        "Yes, if approved by the DL",
+        "No \u2014 extra days are already rewarded via the Martian Allowance",
+        "Only extra days at the bKash office"
+      ],
+      "correctOpt": 2
+    },
+    {
+      "num": 15,
+      "category": "faq",
+      "text": "How does the Aurora Borealis (night release) allowance work?",
+      "options": [
+        "BDT 1,000 per release, capped at one release per day",
+        "BDT 2,000 per release, uncapped",
+        "2.25\u00d7 daily gross per release",
+        "BDT 1,000 per release, scaled by hours worked"
+      ],
+      "correctOpt": 0
+    },
+    {
+      "num": 16,
+      "category": "faq",
+      "text": "Can you claim both the Aurora Borealis and Martian allowances for the same day?",
+      "options": [
+        "Yes, with both approvals",
+        "Yes, but each at half rate",
+        "No \u2014 they can't be claimed together for the same day",
+        "Only if the release ends after midnight"
+      ],
+      "correctOpt": 2
+    },
+    {
+      "num": 17,
+      "category": "faq",
+      "text": "When a seat opens up at Exanest and multiple employees have applied for regular stay, who gets it?",
+      "options": [
+        "The earliest email applicant",
+        "Draw of lots among applicants",
+        "The employee with the longest tenure at Exabyting",
+        "Whoever the PX team selects"
+      ],
+      "correctOpt": 2
+    },
+    {
+      "num": 18,
+      "category": "faq",
+      "text": "For office lunch, who is automatically counted for the daily meal?",
+      "options": [
+        "Everyone in the Slack lunch channel",
+        "Anyone who booked the previous day",
+        "Anyone physically at the office by 11:00 AM",
+        "All employees, regardless of attendance"
+      ],
+      "correctOpt": 2
+    },
+    {
+      "num": 19,
+      "category": "faq",
+      "text": "The BatMobile transport allowance is post-paid. When is it disbursed?",
+      "options": [
+        "With the same month's salary",
+        "Before the 20th of the following month",
+        "Quarterly, after audit",
+        "On demand via the reimbursement form"
+      ],
+      "correctOpt": 1
+    },
+    {
+      "num": 20,
+      "category": "faq",
+      "text": "The child allowance for an employee with three children is:",
+      "options": [
+        "BDT 7,500 (2,500 \u00d7 3)",
+        "BDT 2,500, paid to the employee's own account",
+        "BDT 2,500 fixed, paid only to the spouse's bank account",
+        "BDT 5,000, paid to the spouse's account"
+      ],
+      "correctOpt": 2
+    },
+    {
+      "num": 21,
+      "category": "general",
+      "text": "Which planet in our solar system rotates on its side, with an axial tilt of about 98 degrees?",
+      "options": [
+        "Venus",
+        "Uranus",
+        "Neptune",
+        "Mercury"
+      ],
+      "correctOpt": 1
+    },
+    {
+      "num": 22,
+      "category": "general",
+      "text": "In *The Matrix*, which pill does Neo take?",
+      "options": [
+        "The blue pill",
+        "The red pill",
+        "The green pill",
+        "He refuses both"
+      ],
+      "correctOpt": 1
+    },
+    {
+      "num": 23,
+      "category": "general",
+      "text": "What is the only mammal capable of true sustained flight?",
+      "options": [
+        "Flying squirrel",
+        "Colugo",
+        "Bat",
+        "Sugar glider"
+      ],
+      "correctOpt": 2
+    },
+    {
+      "num": 24,
+      "category": "general",
+      "text": "Which film won the first-ever Academy Award for Best Picture (then \"Outstanding Picture\")?",
+      "options": [
+        "Wings",
+        "Sunrise",
+        "The Jazz Singer",
+        "Metropolis"
+      ],
+      "correctOpt": 0
+    },
+    {
+      "num": 25,
+      "category": "general",
+      "text": "In the MCU, which character was the keeper of the Time Stone before Doctor Strange?",
+      "options": [
+        "The Ancient One",
+        "Wong",
+        "Agamotto",
+        "Karnak"
+      ],
+      "correctOpt": 2
+    },
+    {
+      "num": 26,
+      "category": "general",
+      "text": "In the Marvel Cinematic Universe, what is the name of Thor's hammer?",
+      "options": [
+        "Stormbreaker",
+        "Mjolnir",
+        "Gungnir",
+        "Gram"
+      ],
+      "correctOpt": 1
+    },
+    {
+      "num": 27,
+      "category": "general",
+      "text": "Which element has the chemical symbol \"Au\"?",
+      "options": [
+        "Silver",
+        "Aluminium",
+        "Argon",
+        "Gold"
+      ],
+      "correctOpt": 3
+    },
+    {
+      "num": 28,
+      "category": "general",
+      "text": "Who directed *Inception*, *Interstellar*, and *Oppenheimer*?",
+      "options": [
+        "Denis Villeneuve",
+        "Christopher Nolan",
+        "Ridley Scott",
+        "James Cameron"
+      ],
+      "correctOpt": 1
+    },
+    {
+      "num": 29,
+      "category": "general",
+      "text": "What is the largest organ of the human body?",
+      "options": [
+        "Liver",
+        "Brain",
+        "Skin",
+        "Lungs"
+      ],
+      "correctOpt": 2
+    },
+    {
+      "num": 30,
+      "category": "general",
+      "text": "In *Friends*, what is the name of Joey's acting agent?",
+      "options": [
+        "Estelle",
+        "Janice",
+        "Gunther",
+        "Cecilia"
+      ],
+      "correctOpt": 0
+    },
+    {
+      "num": 31,
+      "category": "general",
+      "text": "The Great Barrier Reef is located off the coast of which country?",
+      "options": [
+        "Brazil",
+        "South Africa",
+        "Australia",
+        "Indonesia"
+      ],
+      "correctOpt": 2
+    },
+    {
+      "num": 32,
+      "category": "general",
+      "text": "Which streaming series features the fictional town of Hawkins, Indiana?",
+      "options": [
+        "Stranger Things",
+        "Dark",
+        "Riverdale",
+        "Twin Peaks"
+      ],
+      "correctOpt": 0
+    },
+    {
+      "num": 33,
+      "category": "general",
+      "text": "Who wrote the national anthem of Bangladesh, \"Amar Sonar Bangla\"?",
+      "options": [
+        "Kazi Nazrul Islam",
+        "Rabindranath Tagore",
+        "Jasimuddin",
+        "Sufia Kamal"
+      ],
+      "correctOpt": 1
+    },
+    {
+      "num": 34,
+      "category": "general",
+      "text": "What does \"HTTP\" stand for?",
+      "options": [
+        "HyperText Transfer Protocol",
+        "High-Terminal Transfer Process",
+        "Hyperlink Text Transport Program",
+        "HyperText Transmission Protocol"
+      ],
+      "correctOpt": 0
+    },
+    {
+      "num": 35,
+      "category": "general",
+      "text": "In *The Shawshank Redemption*, what does Andy Dufresne secretly build his escape tunnel behind?",
+      "options": [
+        "A wardrobe",
+        "A poster of Rita Hayworth",
+        "A bookshelf",
+        "The prison chapel door"
+      ],
+      "correctOpt": 1
+    },
+    {
+      "num": 36,
+      "category": "general",
+      "text": "Which is the smallest country in the world by area?",
+      "options": [
+        "Monaco",
+        "Nauru",
+        "San Marino",
+        "Vatican City"
+      ],
+      "correctOpt": 3
+    },
+    {
+      "num": 37,
+      "category": "general",
+      "text": "Who is known as the \"Father of the Computer\" for designing the Analytical Engine?",
+      "options": [
+        "Alan Turing",
+        "Charles Babbage",
+        "John von Neumann",
+        "Blaise Pascal"
+      ],
+      "correctOpt": 1
+    },
+    {
+      "num": 38,
+      "category": "general",
+      "text": "In Harry Potter, what is the core of Harry's wand?",
+      "options": [
+        "Dragon heartstring",
+        "Phoenix feather",
+        "Unicorn hair",
+        "Thestral tail hair"
+      ],
+      "correctOpt": 1
+    },
+    {
+      "num": 39,
+      "category": "general",
+      "text": "Light from the Sun takes approximately how long to reach Earth?",
+      "options": [
+        "8 seconds",
+        "8 minutes",
+        "8 hours",
+        "80 seconds"
+      ],
+      "correctOpt": 1
+    },
+    {
+      "num": 40,
+      "category": "general",
+      "text": "Which band performed the hit song \"Bohemian Rhapsody\"?",
+      "options": [
+        "The Beatles",
+        "Led Zeppelin",
+        "Queen",
+        "Pink Floyd"
+      ],
+      "correctOpt": 2
+    },
+    {
+      "num": 41,
+      "category": "general",
+      "text": "What is the currency of Japan?",
+      "options": [
+        "Won",
+        "Yen",
+        "Yuan",
+        "Ringgit"
+      ],
+      "correctOpt": 1
+    },
+    {
+      "num": 42,
+      "category": "general",
+      "text": "In *Titanic* (1997), which actor played the treasure hunter Brock Lovett?",
+      "options": [
+        "Billy Zane",
+        "Bill Paxton",
+        "Victor Garber",
+        "Kathy Bates"
+      ],
+      "correctOpt": 1
+    },
+    {
+      "num": 43,
+      "category": "general",
+      "text": "What is the powerhouse of the cell?",
+      "options": [
+        "Nucleus",
+        "Ribosome",
+        "Mitochondria",
+        "Golgi apparatus"
+      ],
+      "correctOpt": 2
+    },
+    {
+      "num": 44,
+      "category": "general",
+      "text": "Who painted \"The Starry Night\"?",
+      "options": [
+        "Claude Monet",
+        "Vincent van Gogh",
+        "Pablo Picasso",
+        "Salvador Dal\u00ed"
+      ],
+      "correctOpt": 1
+    },
+    {
+      "num": 45,
+      "category": "general",
+      "text": "In cricket, what is a \"duck\"?",
+      "options": [
+        "A batsman dismissed with a score of zero",
+        "A ball that bounces twice before reaching the batsman",
+        "A wicket taken on the first ball of an innings",
+        "Three wickets in three consecutive balls"
+      ],
+      "correctOpt": 0
+    },
+    {
+      "num": 46,
+      "category": "general",
+      "text": "Which planet is known as the Red Planet?",
+      "options": [
+        "Venus",
+        "Jupiter",
+        "Mars",
+        "Saturn"
+      ],
+      "correctOpt": 2
+    },
+    {
+      "num": 47,
+      "category": "general",
+      "text": "In *Game of Thrones*, what is the motto of House Stark?",
+      "options": [
+        "\"Fire and Blood\"",
+        "\"Winter Is Coming\"",
+        "\"Hear Me Roar\"",
+        "\"Growing Strong\""
+      ],
+      "correctOpt": 1
+    },
+    {
+      "num": 48,
+      "category": "general",
+      "text": "What is the time zone offset of Bangladesh Standard Time (BST)?",
+      "options": [
+        "UTC+5:00",
+        "UTC+6:00",
+        "UTC+5:30",
+        "UTC+7:00"
+      ],
+      "correctOpt": 1
+    },
+    {
+      "num": 49,
+      "category": "general",
+      "text": "Which company created the Android operating system originally, before Google acquired it in 2005?",
+      "options": [
+        "Nokia",
+        "BlackBerry",
+        "Android Inc.",
+        "Microsoft"
+      ],
+      "correctOpt": 2
+    },
+    {
+      "num": 50,
+      "category": "general",
+      "text": "In *Interstellar*, on which planet does one hour equal seven Earth years due to time dilation?",
+      "options": [
+        "Mars",
+        "Miller's planet, near the black hole Gargantua",
+        "Mann's planet",
+        "Edmunds' planet"
+      ],
+      "correctOpt": 1
+    }
+  ]
+}
