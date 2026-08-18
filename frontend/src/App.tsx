@@ -10,6 +10,7 @@ const Login = lazy(() => import('./pages/Login.tsx'));
 const QuizPlay = lazy(() => import('./pages/QuizPlay.tsx'));
 const Completion = lazy(() => import('./pages/Completion.tsx'));
 const Leaderboard = lazy(() => import('./pages/Leaderboard.tsx'));
+const Admin = lazy(() => import('./pages/Admin.tsx'));
 
 function PageLoadingFallback() {
   return (
@@ -57,6 +58,14 @@ function App() {
                   element={
                     <ProtectedRoute>
                       <Leaderboard />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin"
+                  element={
+                    <ProtectedRoute requireAdmin>
+                      <Admin />
                     </ProtectedRoute>
                   }
                 />
