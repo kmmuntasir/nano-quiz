@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 import { db } from './index.js';
 
 export interface QuizListRow {
@@ -205,6 +207,180 @@ const countLeaderboardStmt = db.prepare<QuizIdParam, TotalRow>(
    WHERE quiz_id = @quizId`,
 );
 
+// --- Admin helpers ---
+
+export interface QuizInput {
+  title: string;
+  description: string;
+  questionCount: number;
+  timeLimitSeconds: number;
+  startAt: string;
+  endAt: string;
+}
+
+interface InsertQuizParams extends QuizInput {
+  id: string;
+}
+
+const insertQuizStmt = db.prepare<InsertQuizParams, QuizRow>(
+  `INSERT INTO quizzes (id, title, description, question_count, time_limit_seconds, start_at, end_at)
+   VALUES (@id, @title, @description, @questionCount, @timeLimitSeconds, @startAt, @endAt)
+   RETURNING
+     id,
+     title,
+     description,
+     question_count AS questionCount,
+     time_limit_seconds AS timeLimitSeconds,
+     start_at AS startAt,
+     end_at AS endAt,
+     created_at AS createdAt,
+     updated_at AS updatedAt`,
+);
+
+interface UpdateQuizParams extends QuizInput {
+  id: string;
+}
+
+const updateQuizStmt = db.prepare<UpdateQuizParams, QuizRow>(
+  `UPDATE quizzes
+   SET title = @title,
+       description = @description,
+       question_count = @questionCount,
+       time_limit_seconds = @timeLimitSeconds,
+       start_at = @startAt,
+       end_at = @endAt,
+       updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
+   WHERE id = @id
+   RETURNING
+     id,
+     title,
+     description,
+     question_count AS questionCount,
+     time_limit_seconds AS timeLimitSeconds,
+     start_at AS startAt,
+     end_at AS endAt,
+     created_at AS createdAt,
+     updated_at AS updatedAt`,
+);
+
+const deleteQuizStmt = db.prepare<QuizIdParam>('DELETE FROM quizzes WHERE id = @quizId');
+
+const deleteParticipationsByQuizStmt = db.prepare<QuizIdParam>(
+  'DELETE FROM participations WHERE quiz_id = @quizId',
+);
+
+export interface AdminQuizRow extends QuizRow {
+  questionBankSize: number;
+  attemptCount: number;
+}
+
+const selectAdminQuizzesStmt = db.prepare<Record<string, never>, AdminQuizRow>(
+  `SELECT
+     q.id,
+     q.title,
+     q.description,
+     q.question_count AS questionCount,
+     q.time_limit_seconds AS timeLimitSeconds,
+     q.start_at AS startAt,
+     q.end_at AS endAt,
+     q.created_at AS createdAt,
+     q.updated_at AS updatedAt,
+     (SELECT COUNT(*) FROM questions qs WHERE qs.quiz_id = q.id) AS questionBankSize,
+     (SELECT COUNT(*) FROM participations p WHERE p.quiz_id = q.id) AS attemptCount
+   FROM quizzes q
+   ORDER BY q.created_at DESC, q.id`,
+);
+
+export interface AdminQuestionRow extends QuestionRow {
+  seq: number;
+}
+
+const selectAdminQuestionsStmt = db.prepare<QuizIdParam, AdminQuestionRow>(
+  `SELECT
+     id,
+     seq,
+     prompt,
+     options,
+     correct_opt AS correctOpt
+   FROM questions
+   WHERE quiz_id = @quizId
+   ORDER BY seq`,
+);
+
+const selectAdminQuestionByIdStmt = db.prepare<QuestionIdParam, AdminQuestionRow>(
+  `SELECT
+     id,
+     seq,
+     prompt,
+     options,
+     correct_opt AS correctOpt
+   FROM questions
+   WHERE quiz_id = @quizId AND id = @questionId`,
+);
+
+interface InsertQuestionParams {
+  quizId: string;
+  questionId: string;
+  seq: number;
+  prompt: string;
+  options: string;
+  correctOpt: number;
+}
+
+const insertQuestionStmt = db.prepare<InsertQuestionParams, AdminQuestionRow>(
+  `INSERT INTO questions (id, quiz_id, seq, prompt, options, correct_opt)
+   VALUES (@questionId, @quizId, @seq, @prompt, @options, @correctOpt)
+   RETURNING
+     id,
+     seq,
+     prompt,
+     options,
+     correct_opt AS correctOpt`,
+);
+
+interface UpdateQuestionParams {
+  questionId: string;
+  prompt: string;
+  options: string;
+  correctOpt: number;
+}
+
+const updateQuestionStmt = db.prepare<UpdateQuestionParams, AdminQuestionRow>(
+  `UPDATE questions
+   SET prompt = @prompt,
+       options = @options,
+       correct_opt = @correctOpt
+   WHERE id = @questionId
+   RETURNING
+     id,
+     seq,
+     prompt,
+     options,
+     correct_opt AS correctOpt`,
+);
+
+interface QuestionIdOnlyParam {
+  questionId: string;
+}
+
+const deleteQuestionStmt = db.prepare<QuestionIdOnlyParam>(
+  'DELETE FROM questions WHERE id = @questionId',
+);
+
+const countAttemptsStmt = db.prepare<QuizIdParam, CountRow>(
+  `SELECT COUNT(*) AS count
+   FROM participations
+   WHERE quiz_id = @quizId`,
+);
+
+interface MaxSeqRow {
+  maxSeq: number | null;
+}
+
+const maxQuestionSeqStmt = db.prepare<QuizIdParam, MaxSeqRow>(
+  'SELECT MAX(seq) AS maxSeq FROM questions WHERE quiz_id = @quizId',
+);
+
 export const quizzes = {
   listForUser(userId: string, now: string): QuizListRow[] {
     return selectQuizzesForUserStmt.all({ userId, now });
@@ -249,5 +425,72 @@ export const quizzes = {
 
   countLeaderboard(quizId: string): number {
     return countLeaderboardStmt.get({ quizId })!.total;
+  },
+
+  insertQuiz(input: QuizInput): QuizRow {
+    return insertQuizStmt.get({ id: randomUUID(), ...input })!;
+  },
+
+  updateQuiz(id: string, input: QuizInput): QuizRow | undefined {
+    return updateQuizStmt.get({ id, ...input });
+  },
+
+  deleteQuiz(id: string): void {
+    deleteQuizStmt.run({ quizId: id });
+  },
+
+  deleteParticipationsByQuiz(quizId: string): void {
+    deleteParticipationsByQuizStmt.run({ quizId });
+  },
+
+  listAdminQuizzes(): AdminQuizRow[] {
+    return selectAdminQuizzesStmt.all({});
+  },
+
+  listQuestions(quizId: string): AdminQuestionRow[] {
+    return selectAdminQuestionsStmt.all({ quizId });
+  },
+
+  findQuestionById(quizId: string, questionId: string): AdminQuestionRow | undefined {
+    return selectAdminQuestionByIdStmt.get({ quizId, questionId });
+  },
+
+  insertQuestion(
+    quizId: string,
+    questionId: string,
+    seq: number,
+    prompt: string,
+    optionsJson: string,
+    correctOpt: number,
+  ): AdminQuestionRow {
+    return insertQuestionStmt.get({
+      quizId,
+      questionId,
+      seq,
+      prompt,
+      options: optionsJson,
+      correctOpt,
+    })!;
+  },
+
+  updateQuestion(
+    questionId: string,
+    prompt: string,
+    optionsJson: string,
+    correctOpt: number,
+  ): AdminQuestionRow | undefined {
+    return updateQuestionStmt.get({ questionId, prompt, options: optionsJson, correctOpt });
+  },
+
+  deleteQuestion(questionId: string): void {
+    deleteQuestionStmt.run({ questionId });
+  },
+
+  countAttempts(quizId: string): number {
+    return countAttemptsStmt.get({ quizId })!.count;
+  },
+
+  maxQuestionSeq(quizId: string): number | null {
+    return maxQuestionSeqStmt.get({ quizId })!.maxSeq;
   },
 };
