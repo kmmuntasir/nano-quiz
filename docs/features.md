@@ -32,15 +32,15 @@
 
 | ID | Feature | Depends on | Status |
 |---|---|---|---|
-| A-01 | Admin identity & gated admin UI | F-01 | New |
-| A-02 | Create a quiz | A-01 | New |
-| A-03 | Admin quiz list | A-01 | New |
-| A-04 | Question bank: add question | A-02 | New |
-| A-05 | Publish a playable quiz (questionCount vs bank) | A-02, A-04 | New |
-| A-06 | Edit a quiz | A-03, A-05 | New |
-| A-07 | Edit / delete a question | A-04 | New |
-| A-08 | Delete a quiz (cascade) | A-03 | New |
-| A-09 | Admin leaderboard (read-only) | F-10 | New |
+| A-01 | Admin identity & gated admin UI | F-01 | Done |
+| A-02 | Create a quiz | A-01 | Done |
+| A-03 | Admin quiz list | A-01 | Done |
+| A-04 | Question bank: add question | A-02 | Done |
+| A-05 | Publish a playable quiz (questionCount vs bank) | A-02, A-04 | Done |
+| A-06 | Edit a quiz | A-03, A-05 | Done |
+| A-07 | Edit / delete a question | A-04 | Done |
+| A-08 | Delete a quiz (cascade) | A-03 | Done |
+| A-09 | Admin leaderboard (read-only) | F-10 | Done |
 
 ### Platform enablers (not user-facing, shipped inside the features above)
 
