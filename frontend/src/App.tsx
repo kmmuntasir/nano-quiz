@@ -11,6 +11,7 @@ const QuizPlay = lazy(() => import('./pages/QuizPlay.tsx'));
 const Completion = lazy(() => import('./pages/Completion.tsx'));
 const Leaderboard = lazy(() => import('./pages/Leaderboard.tsx'));
 const Admin = lazy(() => import('./pages/Admin.tsx'));
+const AdminQuizForm = lazy(() => import('./pages/AdminQuizForm.tsx'));
 
 function PageLoadingFallback() {
   return (
@@ -66,6 +67,22 @@ function App() {
                   element={
                     <ProtectedRoute requireAdmin>
                       <Admin />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin/quizzes/new"
+                  element={
+                    <ProtectedRoute requireAdmin>
+                      <AdminQuizForm />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin/quizzes/:id/edit"
+                  element={
+                    <ProtectedRoute requireAdmin>
+                      <AdminQuizForm />
                     </ProtectedRoute>
                   }
                 />
