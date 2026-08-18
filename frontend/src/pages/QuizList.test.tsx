@@ -179,6 +179,41 @@ describe('QuizList', () => {
     expect(screen.queryByRole('heading', { name: 'Quiz started' })).not.toBeInTheDocument();
   });
 
+  it('should_refetch_and_disable_start_when_start_returns_409_after_initial_list', async () => {
+    const startable: Quiz = { ...FIXTURES[0] };
+    const participated: Quiz = {
+      ...FIXTURES[0],
+      canStart: false,
+      participated: true,
+      userScore: 8,
+    };
+    let listCalls = 0;
+    server.use(
+      http.get('/api/quizzes', () => {
+        listCalls += 1;
+        return HttpResponse.json(listCalls === 1 ? [startable] : [participated]);
+      }),
+      http.post('/api/quizzes/q-live/start', () =>
+        HttpResponse.json(
+          { error: 'ALREADY_PARTICIPATED', message: 'You have already taken this quiz.' },
+          { status: 409 },
+        ),
+      ),
+    );
+    await renderQuizList();
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole('button', { name: 'Start quiz' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'You have already taken this quiz.',
+    );
+    expect(listCalls).toBe(2);
+    const startButton = await screen.findByRole('button', { name: 'Start quiz' });
+    expect(startButton).toBeDisabled();
+    expect(screen.getAllByText('You scored 8/10').length).toBeGreaterThan(0);
+  });
+
   it('should_refetch_when_tab_becomes_visible_again', async () => {
     mockQuizzes([FIXTURES[0]]);
     await renderQuizList();
