@@ -1,8 +1,9 @@
+import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
 
 export default function TopBar() {
-  const { user, signOut } = useAuth();
+  const { user, isAdmin, signOut } = useAuth();
   const { resolved, theme, toggle } = useTheme();
 
   return (
@@ -46,6 +47,14 @@ export default function TopBar() {
               </svg>
             )}
           </button>
+          {isAdmin && (
+            <Link
+              to="/admin"
+              className="rounded-md px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
+            >
+              Admin
+            </Link>
+          )}
           <button
             type="button"
             onClick={signOut}
