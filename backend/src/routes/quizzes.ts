@@ -1,8 +1,10 @@
 import { randomBytes } from 'node:crypto';
 import { Router } from 'express';
 import type { Request, Response } from 'express';
+import { SqliteError } from 'better-sqlite3';
+import { db } from '../db/index.js';
 import { quizzes } from '../db/quizzes.js';
-import type { QuizListRow } from '../db/quizzes.js';
+import type { QuizListRow, QuizRow } from '../db/quizzes.js';
 import { requireAuth } from '../middleware/auth.js';
 import { deriveQuestionOrder } from '../utils/shuffle.js';
 import { logger } from '../utils/logger.js';
@@ -159,8 +161,154 @@ function getQuestion(req: Request, res: Response): void {
   res.status(200).json(payload);
 }
 
+interface SubmitScoreResult {
+  score: number;
+  totalQuestions: number;
+  correctCount: number;
+  durationMs: number;
+  participated: true;
+}
+
+// Scores answers against the seed-derived order inside a single transaction.
+// On a UNIQUE violation (concurrent duplicate submit) the loser re-reads the
+// stored participation instead of re-scoring.
+interface ScoreAndStoreArgs {
+  userId: string;
+  quiz: QuizRow;
+  order: string[];
+  answers: number[];
+  elapsedMs: number;
+}
+
+const scoreAndStore = db.transaction(
+  ({ userId, quiz, order, answers, elapsedMs }: ScoreAndStoreArgs): SubmitScoreResult => {
+    let correctCount = 0;
+    for (let i = 0; i < order.length; i++) {
+      const question = quizzes.getQuestionById(quiz.id, order[i]);
+      if (question === undefined) {
+        throw new Error(`Question missing during scoring: quizId=${quiz.id}`);
+      }
+      if (answers[i] === question.correctOpt) {
+        correctCount++;
+      }
+    }
+    quizzes.insertParticipation(userId, quiz.id, correctCount, elapsedMs);
+    return {
+      score: correctCount,
+      totalQuestions: quiz.questionCount,
+      correctCount,
+      durationMs: elapsedMs,
+      participated: true as const,
+    };
+  },
+);
+
+function submitQuiz(req: Request, res: Response): void {
+  // Guard order: seed presence → existence → seed format/derivation →
+  // answers/elapsedMs shape → idempotency → score.
+  const body = req.body as Record<string, unknown>;
+  const seed = typeof body.seed === 'string' ? body.seed : '';
+  if (!seed) {
+    res
+      .status(400)
+      .json({ error: 'VALIDATION_ERROR', message: 'A seed is required.' });
+    return;
+  }
+
+  const quiz = quizzes.getById(String(req.params.id));
+  if (!quiz) {
+    res
+      .status(404)
+      .json({ error: 'NOT_FOUND', message: 'Quiz not found.' });
+    return;
+  }
+
+  if (!SEED_PATTERN.test(seed)) {
+    res
+      .status(403)
+      .json({ error: 'INVALID_SEED', message: 'This quiz session is invalid.' });
+    return;
+  }
+
+  // Byte-identical derivation to getQuestion.
+  const order = deriveQuestionOrder(seed, quizzes.listQuestionIds(quiz.id), quiz.questionCount);
+  if (order.length !== quiz.questionCount) {
+    res
+      .status(403)
+      .json({ error: 'INVALID_SEED', message: 'This quiz session is invalid.' });
+    return;
+  }
+
+  const answers = body.answers;
+  const elapsedMs = body.elapsedMs;
+  const answersValid =
+    Array.isArray(answers) &&
+    answers.length === quiz.questionCount &&
+    answers.every((a, i) => {
+      const options = quizzes.getQuestionById(quiz.id, order[i])?.options;
+      if (typeof options !== 'string') return false;
+      let optionCount: number;
+      try {
+        optionCount = (JSON.parse(options) as unknown[]).length;
+      } catch {
+        return false;
+      }
+      return typeof a === 'number' && Number.isInteger(a) && a >= 0 && a < optionCount;
+    });
+  const elapsedValid =
+    typeof elapsedMs === 'number' && Number.isFinite(elapsedMs) && elapsedMs >= 0;
+  if (!answersValid || !elapsedValid) {
+    res.status(400).json({
+      error: 'VALIDATION_ERROR',
+      message: 'Answers and elapsedMs must be valid for this quiz.',
+    });
+    return;
+  }
+
+  // Deliberately NO active-window gate: in-flight submits land past end_at.
+
+  const existing = quizzes.getParticipation(req.userId!, quiz.id);
+  if (existing) {
+    res.status(200).json({
+      score: existing.score,
+      totalQuestions: quiz.questionCount,
+      correctCount: existing.score,
+      durationMs: existing.durationMs,
+      participated: true,
+    });
+    return;
+  }
+
+  try {
+    const result = scoreAndStore({
+      userId: req.userId!,
+      quiz,
+      order,
+      answers: answers as number[],
+      elapsedMs: elapsedMs as number,
+    });
+    res.status(200).json(result);
+  } catch (err) {
+    if (err instanceof SqliteError && err.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+      const stored = quizzes.getParticipation(req.userId!, quiz.id);
+      if (stored) {
+        res.status(200).json({
+          score: stored.score,
+          totalQuestions: quiz.questionCount,
+          correctCount: stored.score,
+          durationMs: stored.durationMs,
+          participated: true,
+        });
+        return;
+      }
+    }
+    throw err; // rolls back the transaction and reaches the error middleware.
+  }
+}
+
 export const quizzesRouter = Router();
 quizzesRouter.use(requireAuth);
 quizzesRouter.get('/', listQuizzes);
 quizzesRouter.post('/:id/start', startQuiz);
 quizzesRouter.get('/:id/question/:seq', getQuestion);
+quizzesRouter.post('/:id/submit', submitQuiz);
