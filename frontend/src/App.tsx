@@ -5,7 +5,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 
-const Home = lazy(() => import('./pages/Home.tsx'));
+const QuizList = lazy(() => import('./pages/QuizList.tsx'));
 const Login = lazy(() => import('./pages/Login.tsx'));
 
 function PageLoadingFallback() {
@@ -29,7 +29,7 @@ function App() {
                   path="/"
                   element={
                     <ProtectedRoute>
-                      <Home />
+                      <QuizList />
                     </ProtectedRoute>
                   }
                 />

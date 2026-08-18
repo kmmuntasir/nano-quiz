@@ -7,7 +7,7 @@ import { renderApp, seedSession } from '../test/utils';
 async function renderAuthedHome(): Promise<void> {
   seedSession();
   renderApp();
-  await screen.findByText('Your quiz list will appear here');
+  await screen.findByText('No quizzes yet');
 }
 
 describe('TopBar', () => {

@@ -18,7 +18,7 @@ describe('Login', () => {
 
     await user.click(screen.getByRole('button', { name: 'Sign in with Google' }));
 
-    expect(await screen.findByText('Your quiz list will appear here')).toBeInTheDocument();
+    expect(await screen.findByText('No quizzes yet')).toBeInTheDocument();
 
     const stored = JSON.parse(localStorage.getItem(AUTH_STORAGE_KEY) ?? 'null');
     expect(stored).toEqual({ token: TEST_TOKEN, user: TEST_USER });

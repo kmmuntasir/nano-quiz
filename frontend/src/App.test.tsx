@@ -17,13 +17,13 @@ describe('App', () => {
     seedSession();
     renderApp();
 
-    expect(await screen.findByText('Your quiz list will appear here')).toBeInTheDocument();
+    expect(await screen.findByText('No quizzes yet')).toBeInTheDocument();
   });
 
   it('should_show_session_expired_notice_when_an_authed_request_returns_401', async () => {
     seedSession();
     renderApp();
-    await screen.findByText('Your quiz list will appear here');
+    await screen.findByText('No quizzes yet');
 
     server.use(
       http.get('/api/quizzes', () =>

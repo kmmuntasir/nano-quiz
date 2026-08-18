@@ -13,6 +13,7 @@ export const TEST_USER: AuthUser = {
 
 export const handlers = [
   http.post('/api/auth/google', () => HttpResponse.json({ token: TEST_TOKEN, user: TEST_USER })),
+  http.get('/api/quizzes', () => HttpResponse.json([])),
 ];
 
 export const server = setupServer(...handlers);
