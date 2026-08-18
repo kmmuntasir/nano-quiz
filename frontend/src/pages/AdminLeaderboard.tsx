@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ApiError, fetchLeaderboard } from '../api/client';
+import { ApiError, adminFetchLeaderboard } from '../api/client';
 import type { LeaderboardData } from '../api/types';
 import TopBar from '../components/TopBar';
 import LeaderboardTable from '../components/LeaderboardTable';
@@ -10,7 +10,7 @@ const ROW_SKELETON_COUNT = 5;
 const CARD_CLASS =
   'flex w-full max-w-md flex-col gap-4 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900';
 
-export default function Leaderboard() {
+export default function AdminLeaderboard() {
   const { id } = useParams<{ id: string }>();
   const [data, setData] = useState<LeaderboardData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -20,7 +20,7 @@ export default function Leaderboard() {
   const load = useCallback(async () => {
     if (id === undefined) return;
     try {
-      const leaderboard = await fetchLeaderboard(id, page);
+      const leaderboard = await adminFetchLeaderboard(id, page);
       setData(leaderboard);
       setError(null);
     } catch (cause) {
@@ -75,10 +75,10 @@ export default function Leaderboard() {
             <>
               <LeaderboardTable data={data} onPageChange={goToPage} />
               <Link
-                to={`/quizzes/${id}/completion`}
+                to="/admin"
                 className="rounded-md border border-slate-200 px-4 py-2 text-center text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
               >
-                Back to result
+                Back to admin
               </Link>
             </>
           )}
